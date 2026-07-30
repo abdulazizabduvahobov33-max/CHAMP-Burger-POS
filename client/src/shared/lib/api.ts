@@ -2,9 +2,28 @@ import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
 import { useAuthStore, type AuthUser } from "@/shared/stores/authStore";
 
+const baseURL = import.meta.env.VITE_API_URL ?? "/api";
+
+// A relative "/api" is only correct when something (nginx, a platform rewrite) proxies it to
+// the backend on this SAME domain. On a split-host deploy (a static frontend + a separate
+// backend service — e.g. Render) that's never the case: VITE_API_URL must be the backend's
+// full URL, baked in at BUILD time (Vite inlines import.meta.env.* — setting the env var after
+// the fact and just restarting does nothing, the site has to be rebuilt). Silently falling
+// back to "/api" here previously showed up only as a generic "login failed" with no clue why —
+// this warning is the whole diagnosis in one line, visible in the browser console with zero
+// extra steps.
+if (import.meta.env.PROD && baseURL === "/api") {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[CHAMP] VITE_API_URL was not set at build time — API requests will go to ${window.location.origin}/api ` +
+      "(this page's own origin). If the backend runs on a different domain, set VITE_API_URL to its full URL " +
+      "and rebuild the frontend.",
+  );
+}
+
 /** Shared axios instance. Attaches the access token and silently refreshes it on 401. */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "/api",
+  baseURL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
