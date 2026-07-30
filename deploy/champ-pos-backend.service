@@ -1,0 +1,33 @@
+# systemd alternative to PM2 for the bare-metal (non-Docker) deployment path — pick ONE of
+# the two, not both. See docs/DEPLOYMENT.md, "Вариант B: без Docker".
+#
+# Install:
+#   sudo cp deploy/champ-pos-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now champ-pos-backend
+#
+# Logs: journalctl -u champ-pos-backend -f
+
+[Unit]
+Description=CHAMP POS backend (Express API)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+# Adjust to wherever the repo actually lives on the VPS.
+WorkingDirectory=/opt/champ-pos/server
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+# server/.env is loaded by the app itself via dotenv — nothing else to inject here.
+
+# Run as a dedicated non-root user (create it once: `sudo useradd -r -s /usr/sbin/nologin champpos`
+# and `sudo chown -R champpos:champpos /opt/champ-pos`), not root — this process handles
+# untrusted HTTP input, so it should have the minimum OS privileges it needs to run.
+User=champpos
+Group=champpos
+
+[Install]
+WantedBy=multi-user.target

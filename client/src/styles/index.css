@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * Theme tokens as space-separated RGB triplets (required by Tailwind's `<alpha-value>`
+   * substitution — see tailwind.config.ts). Dark is the default/original CHAMP look, defined
+   * on :root; [data-theme="light"] (set by ThemeProvider, shared/providers/ThemeProvider.tsx)
+   * overrides them. `--color-onaccent` intentionally does NOT change between themes — text on
+   * a bright champ/success/danger surface must stay dark regardless of theme.
+   */
+  :root {
+    /* Dark theme — graphite surfaces (neutral, not tinted) with the signature CHAMP gold
+     * accent: a fast-food-commercial palette (gold/graphite/warm white + orange accents)
+     * instead of the earlier generic SaaS emerald look. */
+    --color-bg: 28 28 30;
+    --color-bg-soft: 36 36 38;
+    --color-bg-card: 44 44 47;
+    --color-bg-line: 58 58 62;
+    --color-fg: 245 243 239;
+    /* Dark, warm-tinted near-black — text sitting on a bright champ/success/danger surface
+     * needs a dark foreground to clear WCAG AA (4.5:1) against those mid-brightness saturated
+     * colors; white text on them measures ~2.3-3.8:1 and fails. See theme-tokens comment above. */
+    --color-onaccent: 20 18 14;
+    --color-champ: 224 166 58;
+    --color-champ-hover: 240 193 104;
+    --color-champ-dark: 184 132 42;
+    --color-danger: 239 68 68;
+    --color-danger-soft: 248 113 113;
+    --color-success: 34 197 94;
+    --color-warn: 255 122 61;
+    color-scheme: dark;
+  }
+
+  [data-theme="light"] {
+    /* Light theme — warm cream/white surfaces, white cards, a deeper bronze-gold accent for
+     * contrast against the pale background. */
+    --color-bg: 251 248 243;
+    --color-bg-soft: 243 238 229;
+    --color-bg-card: 255 255 255;
+    --color-bg-line: 232 224 210;
+    --color-fg: 42 38 34;
+    --color-onaccent: 20 18 14;
+    --color-champ: 170 120 30;
+    --color-champ-hover: 196 146 47;
+    --color-champ-dark: 138 95 20;
+    --color-danger: 220 38 38;
+    --color-danger-soft: 190 40 40;
+    --color-success: 22 163 74;
+    --color-warn: 217 89 31;
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink text-white font-sans antialiased transition-colors duration-150;
+  }
+
+  /* Consistent, visible keyboard-navigation ring app-wide — mouse/touch users never see it
+   * (`:focus-visible` only fires for keyboard focus in modern browsers), so this is pure
+   * accessibility upside with zero visual impact on the pointer-driven flows already tuned. */
+  *:focus-visible {
+    outline: 2px solid rgb(var(--color-champ));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-ink-line bg-ink-soft px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-champ;
+  }
+}

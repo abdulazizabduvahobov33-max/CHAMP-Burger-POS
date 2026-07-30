@@ -1,0 +1,381 @@
+// ─────────────────────────────────────────────────────────────
+// CHAMP Burger — POS + Inventory
+// Prisma schema (Module 1)
+//
+// Covers the full approved architecture:
+//   • MVP tables (implemented across later modules)
+//   • Future-ready tables (PriceHistory, Setting, Backup) — defined now,
+//     used later, so no schema rewrite is ever needed
+//   • Multi-location fields present everywhere (single default location
+//     is used for now; enabling more branches requires NO migration)
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  SELLER
+}
+
+enum Unit {
+  PIECE // шт
+  KG // кг
+  G // г
+  L // л
+  ML // мл
+}
+
+// UNIT   — обычный товар, списывается по рецепту поштучно
+// WEIGHT — продаётся по весу (Kefsi), продавец вводит вес
+// DIRECT — товар = складская позиция (напитки), рецепта нет  [реализуем позже]
+enum SaleType {
+  UNIT
+  WEIGHT
+  DIRECT
+}
+
+enum StockReason {
+  PURCHASE // приход по закупке
+  SALE // списание при продаже
+  ADJUST // ручная корректировка
+  WASTE // брак / списание
+}
+
+// ── Core / reference ─────────────────────────────────────────
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users          User[]
+  stock          Stock[]
+  purchases      Purchase[]
+  sales          Sale[]
+  stockMovements StockMovement[]
+  aiMessages     AiMessage[]
+
+  @@map("locations")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  // Case-sensitive uniqueness via @unique below; a SECOND, case-insensitive unique index
+  // also exists in the DB (migration 20260708110500_user_login_ci_unique, not representable
+  // here) so "admin2" and "Admin2" can't both exist — login is checked case-insensitively in
+  // user.service.ts's assertLoginAvailable.
+  login        String   @unique
+  passwordHash String
+  role         Role     @default(SELLER)
+  isActive     Boolean  @default(true)
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id])
+  createdAt    DateTime @default(now())
+
+  sales          Sale[]
+  purchases      Purchase[]      @relation("PurchaseCreatedBy")
+  stockMovements StockMovement[] @relation("MovementCreatedBy")
+  priceChanges   PriceHistory[]  @relation("PriceChangedBy")
+  backups        Backup[]        @relation("BackupCreatedBy")
+  refreshTokens  RefreshToken[]
+  aiMessages     AiMessage[]     @relation("AiMessageOwner")
+
+  @@index([login])
+  @@map("users")
+}
+
+// Server-side record of issued refresh tokens — enables logout / revocation
+// and rotation-on-refresh (each refresh revokes the old token, issues a new one).
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  purchases Purchase[]
+
+  @@map("suppliers")
+}
+
+model Ingredient {
+  id          String   @id @default(cuid())
+  // Case-insensitive uniqueness among ACTIVE ingredients is enforced by a partial functional
+  // index (migration 20260708110000_ingredient_name_ci_unique) — Prisma's DSL can't express
+  // `UNIQUE (lower(name)) WHERE "isActive"`, so there's no @unique here even though one exists
+  // in the DB. Same pattern as Category.name.
+  name        String
+  unit        Unit
+  minQuantity Decimal  @default(0) @db.Decimal(12, 3) // порог алерта "мало на складе"
+  lastUnitCost Decimal @default(0) @db.Decimal(12, 2) // последняя закупочная цена / ед.
+  avgUnitCost  Decimal @default(0) @db.Decimal(12, 2) // средневзвешенная себестоимость / ед.
+  isActive    Boolean  @default(true) // мягкое удаление — сохраняет историю движений
+  createdAt   DateTime @default(now())
+
+  stock          Stock[]
+  recipes        Recipe[]
+  purchaseItems  PurchaseItem[]
+  stockMovements StockMovement[]
+
+  @@index([name])
+  @@map("ingredients")
+}
+
+// Остаток ингредиента ПО ФИЛИАЛУ (мультифилиальность заложена сразу).
+model Stock {
+  id           String     @id @default(cuid())
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  locationId   String
+  location     Location   @relation(fields: [locationId], references: [id])
+  quantity     Decimal    @default(0) @db.Decimal(12, 3)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([ingredientId, locationId])
+  @@index([ingredientId])
+  @@map("stock")
+}
+
+// ── Products / menu ──────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  // Case-insensitive uniqueness is enforced by a functional index
+  // (migration 20260707185104_category_name_ci_unique) — Prisma's DSL can't express
+  // `UNIQUE (lower(name))`, so there's no @unique here even though one exists in the DB.
+  name      String
+  createdAt DateTime  @default(now())
+
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  imageUrl   String?
+  saleType   SaleType @default(UNIT)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  variants ProductVariant[]
+
+  @@index([name])
+  @@index([categoryId])
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String // напр. "25 000", "35 000", "за кг"
+  price     Decimal @db.Decimal(12, 2)
+  isActive  Boolean @default(true)
+
+  recipe       Recipe[]
+  saleItems    SaleItem[]
+  priceHistory PriceHistory[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// BOM: состав одного варианта товара.
+model Recipe {
+  id           String         @id @default(cuid())
+  variantId    String
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient     @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal        @db.Decimal(12, 3) // сколько ингредиента на 1 продажу варианта
+
+  @@unique([variantId, ingredientId])
+  @@index([variantId])
+  @@map("recipes")
+}
+
+// ── Purchasing ───────────────────────────────────────────────
+
+model Purchase {
+  id           String   @id @default(cuid())
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id])
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id])
+  purchaseDate DateTime @default(now())
+  totalCost    Decimal  @default(0) @db.Decimal(14, 2)
+  note         String?
+  createdById  String
+  createdBy    User     @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+
+  items PurchaseItem[]
+
+  @@index([purchaseDate])
+  // Module 8: purchase list/report queries scope by location first, then filter/range on
+  // purchaseDate — same access pattern as Sale(locationId, createdAt) in Module 7.
+  @@index([locationId, purchaseDate])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id           String     @id @default(cuid())
+  purchaseId   String
+  purchase     Purchase   @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  packQuantity Decimal    @db.Decimal(12, 3) // кол-во упаковок (10)
+  unitsPerPack Decimal    @db.Decimal(12, 3) // штук в упаковке (10)
+  packPrice    Decimal    @db.Decimal(12, 2) // цена упаковки (70 000)
+  // totalUnits = packQuantity * unitsPerPack  (100)
+  // unitCost   = packPrice / unitsPerPack     (7 000)
+
+  @@index([purchaseId])
+  @@index([ingredientId])
+  @@map("purchase_items")
+}
+
+// ── Sales / POS ──────────────────────────────────────────────
+
+model Sale {
+  id          String   @id @default(cuid())
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id])
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+  totalAmount Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
+
+  items SaleItem[]
+
+  @@index([createdAt])
+  @@index([sellerId])
+  // Reports (Module 7) always scope by location first, then filter/range on createdAt —
+  // a composite index serves that access pattern directly instead of intersecting two scans.
+  @@index([locationId, createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String         @id @default(cuid())
+  saleId    String
+  sale      Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Decimal        @db.Decimal(12, 3)
+  unitPrice Decimal        @db.Decimal(12, 2) // цена "заморожена" на момент продажи
+  subtotal  Decimal        @db.Decimal(14, 2)
+
+  @@index([saleId])
+  // Top-products report groups by variantId across a (potentially large) date-filtered set.
+  @@index([variantId])
+  @@map("sale_items")
+}
+
+// Журнал движения склада — единственный путь изменения остатков (аудит).
+model StockMovement {
+  id           String      @id @default(cuid())
+  ingredientId String
+  ingredient   Ingredient  @relation(fields: [ingredientId], references: [id])
+  locationId   String
+  location     Location    @relation(fields: [locationId], references: [id])
+  change       Decimal     @db.Decimal(12, 3) // + приход / - расход
+  reason       StockReason
+  note         String? // комментарий к ручному пополнению/списанию
+  referenceId  String? // id продажи / закупки
+  createdById  String
+  createdBy    User        @relation("MovementCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@index([ingredientId])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ── Future-ready (defined now, implemented later) ────────────
+
+model PriceHistory {
+  id          String         @id @default(cuid())
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  oldPrice    Decimal        @db.Decimal(12, 2)
+  newPrice    Decimal        @db.Decimal(12, 2)
+  changedById String
+  changedBy   User           @relation("PriceChangedBy", fields: [changedById], references: [id])
+  changedAt   DateTime       @default(now())
+
+  @@index([variantId])
+  @@map("price_history")
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique // cafe_name, logo_url, currency, contact_phone…
+  value String
+
+  @@map("settings")
+}
+
+model Backup {
+  id          String   @id @default(cuid())
+  filename    String
+  size        Int      @default(0)
+  createdById String
+  createdBy   User     @relation("BackupCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("backups")
+}
+
+// ── AI Assistant ─────────────────────────────────────────────
+
+// USER — sent by the owner/admin; ASSISTANT — the AI's reply (local rule-based
+// provider today, swappable for OpenAI/Claude later — see modules/ai/providers).
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AiMessage {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation("AiMessageOwner", fields: [userId], references: [id])
+  locationId String
+  location   Location      @relation(fields: [locationId], references: [id])
+  role       AiMessageRole
+  content    String
+  createdAt  DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@map("ai_messages")
+}

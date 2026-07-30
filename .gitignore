@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# env
+.env
+*.local
+
+# build output
+dist/
+build/
+
+# logs
+*.log
+npm-debug.log*
+
+# prisma
+server/prisma/*.db
+
+# uploads (runtime)
+server/src/uploads/*
+!server/src/uploads/.gitkeep
+
+# database backups (scripts/backup-db.sh output) — contains real sales/customer data
+backups/
+
+# os
+.DS_Store
+Thumbs.db
