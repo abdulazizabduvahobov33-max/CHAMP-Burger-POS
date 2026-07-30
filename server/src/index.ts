@@ -1,8 +1,11 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/db.js";
+import { ensureAdminExists } from "./bootstrap/ensureAdmin.js";
 
 async function bootstrap() {
+  await ensureAdminExists();
+
   const app = createApp();
 
   const server = app.listen(env.port, () => {
