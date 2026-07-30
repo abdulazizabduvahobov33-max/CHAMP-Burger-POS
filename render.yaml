@@ -21,7 +21,12 @@ services:
     env: node
     plan: free
     rootDir: server
-    buildCommand: npm install && npm run build
+    # `--include=dev` is required: NODE_ENV=production (set below/at build time) makes a
+    # plain `npm install` skip devDependencies — which is where typescript, @types/node,
+    # @types/express, prisma (CLI), vite, tailwindcss, etc. all live. Without this flag the
+    # build either can't find `tsc`/`vite` at all, or (worse, and what actually happened)
+    # partially resolves and fails with "could not find declaration file" for express/node.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npx prisma migrate deploy && npm run start
     healthCheckPath: /api/health
     envVars:
@@ -60,7 +65,10 @@ services:
     name: champ-pos-frontend
     env: static
     rootDir: client
-    buildCommand: npm install && npm run build
+    # `--include=dev` is required here too — vite, typescript, tailwindcss, and the @types/*
+    # packages this build needs are all devDependencies (see the backend service above for
+    # why a plain `npm install` would skip them on Render).
+    buildCommand: npm install --include=dev && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
