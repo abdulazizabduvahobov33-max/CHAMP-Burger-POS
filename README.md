@@ -158,15 +158,21 @@ champ-pos/
 ├── scripts/
 │   ├── backup-db.sh              # timestamped pg_dump + retention pruning
 │   └── restore-db.sh             # restore from a backup-db.sh output file
+├── render.yaml                   # Render Blueprint — backend + frontend + Postgres, free tier
+├── docs/RENDER_DEPLOY.md         # click-by-click guide for the free Render deploy above
 └── docs/DEPLOYMENT.md            # full guide: VPS setup, domain, SSL, backups, updates,
                                     # new branches, new admins, PWA install (Android/iOS)
 ```
 
-Quick start (Docker):
+Quick start (Docker, VPS):
 ```
 cp .env.example .env && cp server/.env.example server/.env   # edit secrets first
 docker compose up -d --build
 ```
 
-See `docs/DEPLOYMENT.md` for the complete walkthrough, including the non-Docker (PM2/systemd)
-path and everyday operations (backups, updates, adding a branch/admin).
+See `docs/DEPLOYMENT.md` for the complete VPS walkthrough, including the non-Docker
+(PM2/systemd) path and everyday operations (backups, updates, adding a branch/admin).
+
+**Free hosting instead of a VPS:** see `docs/RENDER_DEPLOY.md` — deploys backend, frontend,
+and a PostgreSQL database on [Render](https://render.com)'s free plan straight from
+`render.yaml` in this repo.

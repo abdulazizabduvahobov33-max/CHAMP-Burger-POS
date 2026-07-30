@@ -13,7 +13,13 @@ function setRefreshCookie(res: Response, token: string) {
   res.cookie(REFRESH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: env.isProd,
-    sameSite: "lax",
+    // "lax" works when the frontend and API share one origin (the nginx same-domain setup in
+    // docs/DEPLOYMENT.md). Split-host deployments (Render: a static site + a separate web
+    // service on different subdomains) are cross-site as far as the browser's concerned, and
+    // a "lax" cookie is never sent on a cross-site XHR/fetch — refresh would silently break
+    // after the 15-minute access token expires. "none" is required for that case and is only
+    // valid together with `secure`, which is already tied to production here.
+    sameSite: env.isProd ? "none" : "lax",
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_COOKIE_MAX_AGE,
   });
