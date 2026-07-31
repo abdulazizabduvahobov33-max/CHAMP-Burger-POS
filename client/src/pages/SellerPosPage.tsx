@@ -27,7 +27,7 @@ export default function SellerPosPage() {
       </header>
 
       <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[1fr_380px]">
-        <div className="min-h-0 flex-1 lg:border-r lg:border-ink-line [padding-bottom:calc(4rem+env(safe-area-inset-bottom))] lg:[padding-bottom:0px]">
+        <div className="min-h-0 min-w-0 flex-1 lg:border-r lg:border-ink-line [padding-bottom:calc(4rem+env(safe-area-inset-bottom))] lg:[padding-bottom:0px]">
           <PosMenu />
         </div>
         <PosCart />
