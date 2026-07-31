@@ -96,7 +96,19 @@ export function createApp() {
   });
 
   // Product photos: publicly readable (menu images), writes are admin-only via /api/uploads.
-  app.use("/uploads", express.static(UPLOADS_DIR));
+  // helmet()'s default Cross-Origin-Resource-Policy is "same-origin", which blocks <img> loads
+  // from a different origin — on a split-host deploy (a static frontend + a separate backend
+  // service, e.g. Render) that's every request, since the photos are only ever embedded from the
+  // frontend's origin. Relaxed to "cross-origin" for this one public, read-only static route;
+  // the rest of the API keeps helmet's stricter default.
+  app.use(
+    "/uploads",
+    (_req, res, next) => {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      next();
+    },
+    express.static(UPLOADS_DIR),
+  );
 
   app.use("/api/auth", authRoutes);
   app.use("/api/ingredients", authenticate, authorize("SUPER_ADMIN"), ingredientRoutes);
