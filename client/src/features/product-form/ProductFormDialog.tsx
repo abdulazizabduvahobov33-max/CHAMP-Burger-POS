@@ -6,6 +6,7 @@ import { useCategories } from "@/entities/category/api";
 import { deleteProductImage, uploadProductImage, useCreateProduct, useUpdateProduct } from "@/entities/product/api";
 import { SALE_TYPE_LABELS, SALE_TYPE_OPTIONS, type Product, type SaleType } from "@/entities/product/model";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { resolveUploadUrl } from "@/shared/lib/uploads";
 import { toast } from "@/shared/stores/toastStore";
 import { Dialog } from "@/shared/ui/Dialog";
 
@@ -139,7 +140,7 @@ export function ProductFormDialog({ open, onClose, product }: ProductFormDialogP
           <div className="shrink-0">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-ink-line bg-ink-soft">
               {imageUrl ? (
-                <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                <img src={resolveUploadUrl(imageUrl) as string} alt="" className="h-full w-full object-cover" />
               ) : (
                 <ImagePlus className="h-6 w-6 text-white/20" />
               )}

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Sandwich } from "lucide-react";
 
+import { resolveUploadUrl } from "@/shared/lib/uploads";
+
 type ProductImageProps = {
   src: string | null | undefined;
   alt: string;
@@ -13,13 +15,14 @@ type ProductImageProps = {
 export function ProductImage({ src, alt, className = "" }: ProductImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
-  const showImage = Boolean(src) && !errored;
+  const resolvedSrc = resolveUploadUrl(src);
+  const showImage = Boolean(resolvedSrc) && !errored;
 
   return (
     <div className={`relative overflow-hidden bg-ink ${className}`}>
       {showImage && (
         <img
-          src={src as string}
+          src={resolvedSrc as string}
           alt={alt}
           loading="lazy"
           decoding="async"

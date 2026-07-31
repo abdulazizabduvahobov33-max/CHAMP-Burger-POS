@@ -10,7 +10,7 @@ import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { deleteImage, uploadImage } from "@/shared/lib/uploads";
+import { deleteImage, resolveUploadUrl, uploadImage } from "@/shared/lib/uploads";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { toast } from "@/shared/stores/toastStore";
@@ -150,7 +150,7 @@ export default function SettingsPage() {
                 <div className="shrink-0">
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-ink-line bg-ink-soft">
                     {form.logo_url ? (
-                      <img src={form.logo_url} alt="" className="h-full w-full object-cover" />
+                      <img src={resolveUploadUrl(form.logo_url) as string} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <ImagePlus className="h-6 w-6 text-white/20" />
                     )}
