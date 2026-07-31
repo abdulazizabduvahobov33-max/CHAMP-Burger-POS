@@ -16,9 +16,32 @@ npm-debug.log*
 # prisma
 server/prisma/*.db
 
-# uploads (runtime)
+# uploads (runtime) — EXCEPT the menu's seed photos (see server/src/bootstrap/menu.ts), which
+# are committed on purpose: they need to exist right after a fresh `git clone` on any host,
+# including ones with an ephemeral filesystem (Render's free plan) where nothing uploaded at
+# runtime survives a redeploy. Any *other* file dropped into this folder — a real
+# admin-uploaded photo — stays ignored, same as before.
 server/src/uploads/*
 !server/src/uploads/.gitkeep
+!server/src/uploads/2d208002-54cf-4395-9287-70cd1bfc4004.jpg
+!server/src/uploads/afd14271-d00e-48c9-b317-89e2f4fa8ef2.jpg
+!server/src/uploads/43aec59d-28ce-470b-8274-c8f480463937.jpg
+!server/src/uploads/e03d2117-c4cd-4a01-ba54-2582b3f14a82.jpg
+!server/src/uploads/04341b53-7e1f-4dd6-964b-fc0904076c19.jpg
+!server/src/uploads/d835fa66-96d3-449e-816d-2928debe6fc3.jpg
+!server/src/uploads/96d52632-5537-45e1-9881-6966f08c8617.jpg
+!server/src/uploads/b1f1cf35-3bb2-4794-9396-ca582373dba9.jpg
+!server/src/uploads/82a65dd7-3cc6-4869-8f40-c8378e20089d.jpg
+!server/src/uploads/b3c8a75d-9d07-45fe-9909-c0fd17b11fae.jpg
+!server/src/uploads/5148d3be-1b38-4b1c-b4cb-0e6e01f0309b.jpg
+!server/src/uploads/9c0210f8-544c-4f6d-9169-82c51c452b81.jpg
+!server/src/uploads/413a3f83-81cf-46f3-8da4-22c25f41bcc7.jpg
+!server/src/uploads/ee1f4ca4-9efb-4108-a846-27b45fd46c23.jpg
+!server/src/uploads/c98e7dba-0b54-4454-96ee-a3784720c39b.jpg
+!server/src/uploads/268ffacb-27b2-42ef-bfae-3e6ef10d07b0.jpg
+!server/src/uploads/23ae05fe-5dc7-4f48-b256-53ea3c783c6a.jpg
+!server/src/uploads/49fb5e62-32fe-4351-9ee7-654ca84836cf.jpg
+!server/src/uploads/f4c32840-b72e-4a77-8c6f-83d640001ead.jpg
 
 # database backups (scripts/backup-db.sh output) — contains real sales/customer data
 backups/

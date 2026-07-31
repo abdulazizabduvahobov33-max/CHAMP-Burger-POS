@@ -52,7 +52,11 @@
     "password": "Пароль",
     "loginFailed": "Не удалось войти",
     "signingIn": "Вход…",
-    "signIn": "Войти"
+    "signIn": "Войти",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "loginPlaceholder": "Введите логин",
+    "passwordPlaceholder": "Введите пароль"
   },
   "dashboard": {
     "title": "Панель управления",

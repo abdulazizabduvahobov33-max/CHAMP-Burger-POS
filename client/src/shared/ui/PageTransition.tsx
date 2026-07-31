@@ -5,7 +5,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   return (
-    <div key={location.pathname} className="animate-fade-in">
+    <div key={location.pathname} className="h-full animate-fade-in">
       {children}
     </div>
   );

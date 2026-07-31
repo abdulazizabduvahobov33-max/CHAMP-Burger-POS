@@ -52,7 +52,11 @@
     "password": "Parol",
     "loginFailed": "Tizimga kirib bo'lmadi",
     "signingIn": "Kirilmoqda…",
-    "signIn": "Kirish"
+    "signIn": "Kirish",
+    "showPassword": "Parolni ko'rsatish",
+    "hidePassword": "Parolni yashirish",
+    "loginPlaceholder": "Loginni kiriting",
+    "passwordPlaceholder": "Parolni kiriting"
   },
   "dashboard": {
     "title": "Boshqaruv paneli",

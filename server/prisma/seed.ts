@@ -18,72 +18,16 @@ import { PrismaClient, Role, SaleType } from "@prisma/client";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 
+import { MENU } from "../src/bootstrap/menu.js";
+import { UPLOADS_URL_PREFIX } from "../src/shared/utils/uploads.js";
+
 dotenv.config();
 
 const prisma = new PrismaClient();
 
-// ── Categories (stored as strings on products) ────────────────
-const CATEGORY = {
-  BURGERS: "Бургеры",
-  HOTDOGS: "Хот-доги и лаваш",
-  OTHER: "Прочее",
-  DRINKS: "Напитки",
-} as const;
-
-// ── Menu, exactly as on the CHAMP Burger board ────────────────
-// saleType UNIT = обычный; WEIGHT = по весу (Kefsi)
-type MenuItem = {
-  name: string;
-  category: string;
-  saleType?: SaleType;
-  variants: { label: string; price: number }[];
-};
-
-const MENU: MenuItem[] = [
-  // Бургеры
-  { name: "Гамбургер", category: CATEGORY.BURGERS, variants: [
-    { label: "25 000", price: 25000 }, { label: "35 000", price: 35000 } ] },
-  { name: "Чизбургер", category: CATEGORY.BURGERS, variants: [
-    { label: "28 000", price: 28000 }, { label: "38 000", price: 38000 } ] },
-  { name: "Chicken Burger", category: CATEGORY.BURGERS, variants: [
-    { label: "20 000", price: 20000 }, { label: "28 000", price: 28000 } ] },
-  { name: "Chicken Cheese", category: CATEGORY.BURGERS, variants: [
-    { label: "23 000", price: 23000 }, { label: "30 000", price: 30000 } ] },
-
-  // Хот-доги и лаваш
-  { name: "Kanada", category: CATEGORY.HOTDOGS, variants: [
-    { label: "15 000", price: 15000 }, { label: "20 000", price: 20000 } ] },
-  { name: "Salat", category: CATEGORY.HOTDOGS, variants: [
-    { label: "15 000", price: 15000 }, { label: "20 000", price: 20000 }, { label: "25 000", price: 25000 } ] },
-  { name: "BBQ (Hot-dog)", category: CATEGORY.HOTDOGS, variants: [
-    { label: "25 000", price: 25000 }, { label: "35 000", price: 35000 } ] },
-  { name: "Mangal", category: CATEGORY.HOTDOGS, variants: [
-    { label: "25 000", price: 25000 }, { label: "35 000", price: 35000 } ] },
-  { name: "Lavash", category: CATEGORY.HOTDOGS, variants: [
-    { label: "35 000", price: 35000 }, { label: "38 000", price: 38000 } ] },
-  { name: "Qazili Hot-dog", category: CATEGORY.HOTDOGS, variants: [
-    { label: "25 000", price: 25000 }, { label: "30 000", price: 30000 }, { label: "35 000", price: 35000 } ] },
-  { name: "American Hot-dog", category: CATEGORY.HOTDOGS, variants: [
-    { label: "20 000", price: 20000 }, { label: "25 000", price: 25000 } ] },
-  { name: "Koralevskiy Hot-dog", category: CATEGORY.HOTDOGS, variants: [
-    { label: "25 000", price: 25000 } ] },
-
-  // Прочее
-  { name: "Hagi", category: CATEGORY.OTHER, variants: [
-    { label: "35 000", price: 35000 } ] },
-  { name: "Doner", category: CATEGORY.OTHER, variants: [
-    { label: "30 000", price: 30000 }, { label: "40 000", price: 40000 } ] },
-  { name: "Kartoshka po derevenski", category: CATEGORY.OTHER, variants: [
-    { label: "18 000", price: 18000 } ] },
-  { name: "Kefsi", category: CATEGORY.OTHER, saleType: SaleType.WEIGHT, variants: [
-    { label: "100 000 / кг", price: 100000 } ] },
-  { name: "Fri", category: CATEGORY.OTHER, variants: [
-    { label: "15 000", price: 15000 } ] },
-  { name: "Kofe", category: CATEGORY.DRINKS, variants: [
-    { label: "10 000", price: 10000 } ] },
-  { name: "Limon choy", category: CATEGORY.DRINKS, variants: [
-    { label: "8 000", price: 8000 } ] },
-];
+// Menu/categories/photo filenames now live in src/bootstrap/menu.ts — shared with the
+// automatic first-run bootstrap (src/bootstrap/ensureMenuSeeded.ts) so hosts with no shell
+// (Render's free plan) still get the full menu without this script ever running there.
 
 async function main() {
   console.log("🌱 Seeding CHAMP Burger database...\n");
@@ -187,6 +131,7 @@ async function main() {
           name: item.name,
           categoryId: categoryIdByName.get(item.category)!,
           saleType: item.saleType ?? SaleType.UNIT,
+          imageUrl: item.imageFile ? `${UPLOADS_URL_PREFIX}${item.imageFile}` : null,
           isActive: true,
         },
       });
