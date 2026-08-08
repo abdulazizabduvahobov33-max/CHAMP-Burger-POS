@@ -318,6 +318,12 @@
       "processing": "Rasmiylashtirilmoqda…"
     }
   },
+  "history": {
+    "title": "Buyurtmalar tarixi",
+    "backToPos": "Kassaga qaytish",
+    "emptyTitle": "Hali buyurtmalar yo'q",
+    "emptyDescription": "Birinchi sotuvdan keyin bu yerda cheklaringiz paydo bo'ladi"
+  },
   "sale": {
     "summaryRevenue": "Davr uchun tushum",
     "summaryCount": "Cheklar",

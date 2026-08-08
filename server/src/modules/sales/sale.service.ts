@@ -36,6 +36,65 @@ export async function getSale(id: string) {
   return serializeSale(sale);
 }
 
+function shortReceiptNumber(id: string): string {
+  return `#${id.slice(-6).toUpperCase()}`;
+}
+
+/**
+ * The seller's own order history — always scoped to the calling user's id, regardless of role,
+ * so "my sales" means exactly that for anyone hitting these two endpoints. Admin-wide sales
+ * analysis across every seller stays under /api/reports (Module 7), a separate concern.
+ */
+export async function listMySales(sellerId: string, page: number, pageSize: number) {
+  const where: Prisma.SaleWhereInput = { sellerId };
+
+  const [sales, total] = await Promise.all([
+    prisma.sale.findMany({
+      where,
+      select: {
+        id: true,
+        createdAt: true,
+        totalAmount: true,
+        cashReceived: true,
+        changeGiven: true,
+        _count: { select: { items: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.sale.count({ where }),
+  ]);
+
+  return {
+    items: sales.map((s) => ({
+      id: s.id,
+      receiptNumber: shortReceiptNumber(s.id),
+      createdAt: s.createdAt,
+      totalAmount: s.totalAmount.toString(),
+      cashReceived: s.cashReceived?.toString() ?? null,
+      changeGiven: s.changeGiven?.toString() ?? null,
+      itemCount: s._count.items,
+    })),
+    page,
+    pageSize,
+    total,
+  };
+}
+
+export async function getMySale(id: string, sellerId: string) {
+  const sale = await prisma.sale.findUniqueOrThrow({
+    where: { id },
+    include: { items: { include: { variant: { include: { product: true } } } } },
+  });
+  if (sale.sellerId !== sellerId) {
+    // Same 404 as "doesn't exist" (not 403) — a seller has no business learning that a given
+    // id belongs to someone else's sale.
+    throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
+  }
+  return serializeSale(sale);
+}
+
 /**
  * Creates a Sale + its SaleItems and deducts every item's recipe ingredients from stock —
  * all in ONE transaction. If any single item can't be fulfilled (product deactivated mid-order,

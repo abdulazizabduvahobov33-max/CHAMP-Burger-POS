@@ -26,3 +26,20 @@ export type Sale = {
   createdAt: string;
   items: SaleItemResult[];
 };
+
+export type MySaleListItem = {
+  id: string;
+  receiptNumber: string;
+  createdAt: string;
+  totalAmount: string;
+  cashReceived: string | null;
+  changeGiven: string | null;
+  itemCount: number;
+};
+
+export type MySalesList = {
+  items: MySaleListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+};

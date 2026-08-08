@@ -318,6 +318,12 @@
       "processing": "Оформление…"
     }
   },
+  "history": {
+    "title": "История заказов",
+    "backToPos": "Назад к кассе",
+    "emptyTitle": "Заказов пока нет",
+    "emptyDescription": "Здесь появятся ваши чеки после первой продажи"
+  },
   "sale": {
     "summaryRevenue": "Выручка за период",
     "summaryCount": "Чеков",

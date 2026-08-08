@@ -1,4 +1,8 @@
-﻿import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
+﻿import { Link } from "react-router-dom";
+import { Receipt } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
@@ -8,6 +12,7 @@ import { PosCart } from "@/widgets/pos-cart/PosCart";
 import { PosMenu } from "@/widgets/pos-menu/PosMenu";
 
 export default function SellerPosPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   return (
@@ -19,6 +24,14 @@ export default function SellerPosPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-white/50 sm:inline">{user?.name}</span>
+          <Link
+            to="/pos/history"
+            aria-label={t("history.title")}
+            title={t("history.title")}
+            className="rounded-xl border border-ink-line p-2 text-white/50 transition hover:border-champ/50 hover:text-white"
+          >
+            <Receipt className="h-4 w-4" />
+          </Link>
           <ChangePasswordButton />
           <ThemeToggleButton />
           <LanguageSwitcher />

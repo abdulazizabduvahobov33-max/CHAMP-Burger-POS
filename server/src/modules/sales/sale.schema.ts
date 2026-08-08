@@ -12,5 +12,11 @@ export const createSaleSchema = z.object({
   cashReceived: z.coerce.number().nonnegative("Сумма не может быть отрицательной").optional(),
 });
 
+export const listMySalesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type SaleItemInput = z.infer<typeof saleItemSchema>;
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
+export type ListMySalesQuery = z.infer<typeof listMySalesQuerySchema>;

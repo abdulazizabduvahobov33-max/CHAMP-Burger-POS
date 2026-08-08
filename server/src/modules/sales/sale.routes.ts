@@ -20,5 +20,7 @@ const createSaleLimiter = rateLimit({
 });
 
 router.post("/", createSaleLimiter, asyncHandler(controller.create));
+router.get("/", asyncHandler(controller.list));
+router.get("/:id", asyncHandler(controller.detail));
 
 export default router;

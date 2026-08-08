@@ -15,6 +15,7 @@ const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
 const ProfitPage = lazy(() => import("@/pages/ProfitPage"));
 const PurchasesPage = lazy(() => import("@/pages/PurchasesPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
+const SellerHistoryPage = lazy(() => import("@/pages/SellerHistoryPage"));
 const SellerPosPage = lazy(() => import("@/pages/SellerPosPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
@@ -124,6 +125,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute roles={["SELLER"]}>
             <SellerPosPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pos/history"
+        element={
+          <ProtectedRoute roles={["SELLER"]}>
+            <SellerHistoryPage />
           </ProtectedRoute>
         }
       />
