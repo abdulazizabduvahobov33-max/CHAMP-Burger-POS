@@ -160,23 +160,31 @@ export async function deleteIngredient(id: string) {
 export async function restock(locationId: string, ingredientId: string, userId: string, input: StockAmountInput) {
   await findActiveIngredient(ingredientId);
 
-  await prisma.$transaction([
-    prisma.stock.upsert({
+  await prisma.$transaction(async (tx) => {
+    const stock = await tx.stock.upsert({
       where: { ingredientId_locationId: { ingredientId, locationId } },
       create: { ingredientId, locationId, quantity: input.quantity },
       update: { quantity: { increment: input.quantity } },
-    }),
-    prisma.stockMovement.create({
+    });
+    // The upsert's returned row already reflects the increment, so `after` is exact regardless
+    // of which branch ran; `before` is derived from it rather than read separately, closing the
+    // race window a standalone pre-read would leave open.
+    const after = stock.quantity;
+    const before = after.minus(input.quantity);
+
+    await tx.stockMovement.create({
       data: {
         ingredientId,
         locationId,
         change: input.quantity,
+        quantityBefore: before,
+        quantityAfter: after,
         reason: "PURCHASE",
         note: input.note,
         createdById: userId,
       },
-    }),
-  ]);
+    });
+  });
 
   return getIngredient(locationId, ingredientId);
 }
@@ -199,11 +207,20 @@ export async function writeOff(locationId: string, ingredientId: string, userId:
       throw new AppError(422, "INSUFFICIENT_STOCK", `Недостаточно на складе: доступно ${current.toString()}`);
     }
 
+    // Read the row back after the atomic decrement (same transaction) so `after` reflects the
+    // exact post-decrement value; `before` is derived from it rather than read separately,
+    // avoiding a race window between a pre-read and the guarded update above.
+    const stock = await tx.stock.findUnique({ where: { ingredientId_locationId: { ingredientId, locationId } } });
+    const after = stock?.quantity ?? new Prisma.Decimal(0);
+    const before = after.plus(input.quantity);
+
     await tx.stockMovement.create({
       data: {
         ingredientId,
         locationId,
         change: -input.quantity,
+        quantityBefore: before,
+        quantityAfter: after,
         reason: "WASTE",
         note: input.note,
         createdById: userId,
@@ -235,6 +252,8 @@ export async function listMovements(locationId: string, ingredientId: string, qu
   const items = rows.map((m) => ({
     id: m.id,
     change: m.change.toString(),
+    quantityBefore: m.quantityBefore?.toString() ?? null,
+    quantityAfter: m.quantityAfter?.toString() ?? null,
     reason: m.reason,
     note: m.note,
     createdAt: m.createdAt,

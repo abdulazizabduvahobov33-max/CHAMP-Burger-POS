@@ -13,11 +13,16 @@ type RestockDialogProps = {
   ingredient: Ingredient | null;
 };
 
+// Quick-add presets a cashier can stack (click +5 then +1 → 6) instead of typing every restock
+// by hand. PIECE-unit ingredients round to whole numbers; weight/volume units keep decimals.
+const QUICK_AMOUNTS = [1, 2, 5, 10, 20];
+
 export function RestockDialog({ open, onClose, ingredient }: RestockDialogProps) {
   const { t } = useTranslation();
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const mutation = useRestockIngredient(ingredient?.id ?? "");
+  const isWholeUnit = ingredient?.unit === "PIECE";
 
   useEffect(() => {
     if (!open) return;
@@ -28,6 +33,14 @@ export function RestockDialog({ open, onClose, ingredient }: RestockDialogProps)
   }, [open, ingredient]);
 
   if (!ingredient) return null;
+
+  function addQuickAmount(amount: number) {
+    setQuantity((prev) => {
+      const next = (Number(prev) || 0) + amount;
+      // Avoid float artifacts like 0.30000000000000004 while still allowing decimals.
+      return String(Math.round(next * 1000) / 1000);
+    });
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -58,14 +71,27 @@ export function RestockDialog({ open, onClose, ingredient }: RestockDialogProps)
           </span>
           <input
             type="number"
-            min={0.001}
-            step="0.001"
+            min={isWholeUnit ? 1 : 0.001}
+            step={isWholeUnit ? 1 : 0.001}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             autoFocus
             required
             className="input"
           />
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {QUICK_AMOUNTS.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => addQuickAmount(amount)}
+                className="rounded-lg bg-ink-soft px-2.5 py-1.5 text-xs font-bold text-white/60 transition hover:bg-ink-line hover:text-white"
+              >
+                +{amount}
+              </button>
+            ))}
+          </div>
         </label>
 
         <label className="block">

@@ -125,18 +125,18 @@ model Supplier {
 }
 
 model Ingredient {
-  id          String   @id @default(cuid())
+  id           String   @id @default(cuid())
   // Case-insensitive uniqueness among ACTIVE ingredients is enforced by a partial functional
   // index (migration 20260708110000_ingredient_name_ci_unique) — Prisma's DSL can't express
   // `UNIQUE (lower(name)) WHERE "isActive"`, so there's no @unique here even though one exists
   // in the DB. Same pattern as Category.name.
-  name        String
-  unit        Unit
-  minQuantity Decimal  @default(0) @db.Decimal(12, 3) // порог алерта "мало на складе"
-  lastUnitCost Decimal @default(0) @db.Decimal(12, 2) // последняя закупочная цена / ед.
-  avgUnitCost  Decimal @default(0) @db.Decimal(12, 2) // средневзвешенная себестоимость / ед.
-  isActive    Boolean  @default(true) // мягкое удаление — сохраняет историю движений
-  createdAt   DateTime @default(now())
+  name         String
+  unit         Unit
+  minQuantity  Decimal  @default(0) @db.Decimal(12, 3) // порог алерта "мало на складе"
+  lastUnitCost Decimal  @default(0) @db.Decimal(12, 2) // последняя закупочная цена / ед.
+  avgUnitCost  Decimal  @default(0) @db.Decimal(12, 2) // средневзвешенная себестоимость / ед.
+  isActive     Boolean  @default(true) // мягкое удаление — сохраняет историю движений
+  createdAt    DateTime @default(now())
 
   stock          Stock[]
   recipes        Recipe[]
@@ -165,14 +165,14 @@ model Stock {
 // ── Products / menu ──────────────────────────────────────────
 
 model Category {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   // Case-insensitive uniqueness is enforced by a functional index
   // (migration 20260707185104_category_name_ci_unique) — Prisma's DSL can't express
   // `UNIQUE (lower(name))`, so there's no @unique here even though one exists in the DB.
   name      String
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  products  Product[]
+  products Product[]
 
   @@map("categories")
 }
@@ -227,17 +227,17 @@ model Recipe {
 // ── Purchasing ───────────────────────────────────────────────
 
 model Purchase {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   supplierId   String?
   supplier     Supplier? @relation(fields: [supplierId], references: [id])
   locationId   String
-  location     Location @relation(fields: [locationId], references: [id])
-  purchaseDate DateTime @default(now())
-  totalCost    Decimal  @default(0) @db.Decimal(14, 2)
+  location     Location  @relation(fields: [locationId], references: [id])
+  purchaseDate DateTime  @default(now())
+  totalCost    Decimal   @default(0) @db.Decimal(14, 2)
   note         String?
   createdById  String
-  createdBy    User     @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
-  createdAt    DateTime @default(now())
+  createdBy    User      @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
 
   items PurchaseItem[]
 
@@ -268,12 +268,12 @@ model PurchaseItem {
 // ── Sales / POS ──────────────────────────────────────────────
 
 model Sale {
-  id          String   @id @default(cuid())
-  sellerId    String
-  seller      User     @relation(fields: [sellerId], references: [id])
-  locationId  String
-  location    Location @relation(fields: [locationId], references: [id])
-  totalAmount Decimal  @default(0) @db.Decimal(14, 2)
+  id           String   @id @default(cuid())
+  sellerId     String
+  seller       User     @relation(fields: [sellerId], references: [id])
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id])
+  totalAmount  Decimal  @default(0) @db.Decimal(14, 2)
   // Cash tendered by the customer and change handed back — both nullable: only cash checkouts
   // (the only payment method the POS supports today) populate them; a future non-cash payment
   // method leaves both null rather than storing a meaningless 0. Captured for the receipt, which
@@ -281,7 +281,7 @@ model Sale {
   // path in report/receipt code once printing is wired up).
   cashReceived Decimal? @db.Decimal(14, 2)
   changeGiven  Decimal? @db.Decimal(14, 2)
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   items SaleItem[]
 
@@ -311,18 +311,22 @@ model SaleItem {
 
 // Журнал движения склада — единственный путь изменения остатков (аудит).
 model StockMovement {
-  id           String      @id @default(cuid())
-  ingredientId String
-  ingredient   Ingredient  @relation(fields: [ingredientId], references: [id])
-  locationId   String
-  location     Location    @relation(fields: [locationId], references: [id])
-  change       Decimal     @db.Decimal(12, 3) // + приход / - расход
-  reason       StockReason
-  note         String? // комментарий к ручному пополнению/списанию
-  referenceId  String? // id продажи / закупки
-  createdById  String
-  createdBy    User        @relation("MovementCreatedBy", fields: [createdById], references: [id])
-  createdAt    DateTime    @default(now())
+  id             String      @id @default(cuid())
+  ingredientId   String
+  ingredient     Ingredient  @relation(fields: [ingredientId], references: [id])
+  locationId     String
+  location       Location    @relation(fields: [locationId], references: [id])
+  change         Decimal     @db.Decimal(12, 3) // + приход / - расход
+  // Остаток непосредственно до/после этой операции — для истории пополнений (null у записей,
+  // созданных до добавления этих колонок).
+  quantityBefore Decimal?    @db.Decimal(12, 3)
+  quantityAfter  Decimal?    @db.Decimal(12, 3)
+  reason         StockReason
+  note           String? // комментарий к ручному пополнению/списанию
+  referenceId    String? // id продажи / закупки
+  createdById    String
+  createdBy      User        @relation("MovementCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime    @default(now())
 
   @@index([ingredientId])
   @@index([createdAt])

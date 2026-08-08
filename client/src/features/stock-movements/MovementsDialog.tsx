@@ -36,7 +36,7 @@ export function MovementsDialog({ open, onClose, ingredient }: MovementsDialogPr
     >
       {isLoading && (
         <div className="overflow-hidden rounded-xl border border-ink-line">
-          <SkeletonTableRows rows={4} columns={5} />
+          <SkeletonTableRows rows={4} columns={6} />
         </div>
       )}
 
@@ -50,6 +50,7 @@ export function MovementsDialog({ open, onClose, ingredient }: MovementsDialogPr
                 <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.date")}</th>
                 <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.type")}</th>
                 <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.change")}</th>
+                <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.balance")}</th>
                 <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.who")}</th>
                 <th className="px-4 py-2 font-medium">{t("warehouse.movementsColumns.comment")}</th>
               </tr>
@@ -68,6 +69,11 @@ export function MovementsDialog({ open, onClose, ingredient }: MovementsDialogPr
                     <td className={`whitespace-nowrap px-4 py-2 font-semibold ${positive ? "text-success" : "text-danger-soft"}`}>
                       {positive ? "+" : ""}
                       {m.change} {t(UNIT_LABELS[ingredient.unit])}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-white/50">
+                      {m.quantityBefore !== null && m.quantityAfter !== null
+                        ? `${m.quantityBefore} → ${m.quantityAfter}`
+                        : "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2 text-white/70">{m.createdByName}</td>
                     <td className="px-4 py-2 text-white/50">{m.note ?? "—"}</td>

@@ -44,6 +44,9 @@ export const MOVEMENT_REASON_LABELS: Record<StockMovementReason, string> = {
 export type StockMovement = {
   id: string;
   change: string;
+  // Null for movements recorded before these columns existed.
+  quantityBefore: string | null;
+  quantityAfter: string | null;
   reason: StockMovementReason;
   note: string | null;
   createdAt: string;
