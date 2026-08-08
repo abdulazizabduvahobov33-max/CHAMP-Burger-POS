@@ -307,7 +307,16 @@
     "searchPlaceholder": "Mahsulot qidirish…",
     "allCategories": "Barchasi",
     "emptyTitle": "Menyu hozircha bo'sh",
-    "emptyDescription": "Mahsulotlar hali qo'shilmagan — administratorga murojaat qiling"
+    "emptyDescription": "Mahsulotlar hali qo'shilmagan — administratorga murojaat qiling",
+    "payment": {
+      "title": "To'lov",
+      "due": "To'lash uchun",
+      "received": "Mijozdan olindi",
+      "change": "Qaytim",
+      "insufficient": "Yetarli emas",
+      "confirm": "To'lash",
+      "processing": "Rasmiylashtirilmoqda…"
+    }
   },
   "sale": {
     "summaryRevenue": "Davr uchun tushum",

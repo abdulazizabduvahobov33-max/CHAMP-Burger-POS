@@ -5,6 +5,6 @@ import { createSaleSchema } from "./sale.schema.js";
 
 export async function create(req: Request, res: Response) {
   const input = createSaleSchema.parse(req.body);
-  const sale = await saleService.createSale(req.user!.locationId, req.user!.sub, input.items);
+  const sale = await saleService.createSale(req.user!.locationId, req.user!.sub, input.items, input.cashReceived);
   res.status(201).json({ sale });
 }

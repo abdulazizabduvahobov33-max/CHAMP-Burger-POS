@@ -5,6 +5,7 @@ export type SaleItemLine = {
 
 export type CreateSaleInput = {
   items: SaleItemLine[];
+  cashReceived?: number;
 };
 
 export type SaleItemResult = {
@@ -20,6 +21,8 @@ export type SaleItemResult = {
 export type Sale = {
   id: string;
   totalAmount: string;
+  cashReceived: string | null;
+  changeGiven: string | null;
   createdAt: string;
   items: SaleItemResult[];
 };

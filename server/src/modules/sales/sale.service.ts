@@ -13,6 +13,8 @@ function serializeSale(sale: SaleWithItems) {
   return {
     id: sale.id,
     totalAmount: sale.totalAmount.toString(),
+    cashReceived: sale.cashReceived?.toString() ?? null,
+    changeGiven: sale.changeGiven?.toString() ?? null,
     createdAt: sale.createdAt,
     items: sale.items.map((item) => ({
       id: item.id,
@@ -46,7 +48,12 @@ export async function getSale(id: string) {
  * the gap between a pre-check and the transaction opening would silently go unnoticed, charging
  * a stale price or selling a now-unavailable item.
  */
-export async function createSale(locationId: string, sellerId: string, items: SaleItemInput[]) {
+export async function createSale(
+  locationId: string,
+  sellerId: string,
+  items: SaleItemInput[],
+  cashReceived?: number,
+) {
   // Defensive: collapse accidental duplicate variantId entries in one request instead of
   // trusting the client to have already aggregated quantities per line.
   const merged = new Map<string, number>();
@@ -96,7 +103,25 @@ export async function createSale(locationId: string, sellerId: string, items: Sa
       await deductRecipeIngredients(tx, variantId, locationId, quantity, sellerId, saleItem.id);
     }
 
-    await tx.sale.update({ where: { id: sale.id }, data: { totalAmount } });
+    // Validated against the server-computed total (never the client's pre-checkout snapshot) —
+    // the same reasoning as looking up prices fresh inside the transaction above.
+    let changeGiven: Prisma.Decimal | undefined;
+    if (cashReceived !== undefined) {
+      const received = new Prisma.Decimal(cashReceived);
+      if (received.lt(totalAmount)) {
+        throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+      }
+      changeGiven = received.sub(totalAmount);
+    }
+
+    await tx.sale.update({
+      where: { id: sale.id },
+      data: {
+        totalAmount,
+        cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
+        changeGiven,
+      },
+    });
     return sale.id;
   });
 

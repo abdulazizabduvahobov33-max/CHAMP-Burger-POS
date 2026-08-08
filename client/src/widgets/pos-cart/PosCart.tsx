@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useCreateSale } from "@/entities/sale/api";
 import { formatPrice } from "@/entities/product/lib";
 import { ProductImage } from "@/entities/product/ui/ProductImage";
+import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { useCartStore, type CartLine } from "@/shared/stores/cartStore";
 import { toast } from "@/shared/stores/toastStore";
@@ -19,6 +20,7 @@ export function PosCart() {
   const clear = useCartStore((s) => s.clear);
   const total = cartTotal(lines);
   const [mobileExpanded, setMobileExpanded] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   // Owned here (not inside CartBody) so the desktop panel and the mobile sheet — two separate
   // renders of the same cart, switched by CSS breakpoint, not conditional mounting — share one
@@ -32,15 +34,16 @@ export function PosCart() {
     return () => window.clearTimeout(receiptTimeoutRef.current);
   }, []);
 
-  function handleCheckout() {
+  function handlePaymentConfirm(cashReceived: number) {
     if (lines.length === 0 || createSale.isPending) return;
     setCheckoutError(null);
     setLastReceiptTotal(null);
     createSale.mutate(
-      { items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })) },
+      { items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), cashReceived },
       {
         onSuccess: (sale) => {
           clear();
+          setPaymentOpen(false);
           // Show what the server actually charged, not the cart's pre-checkout snapshot —
           // they can differ if a price changed while the cart was open.
           setLastReceiptTotal(sale.totalAmount);
@@ -54,7 +57,15 @@ export function PosCart() {
     );
   }
 
-  const bodyProps = { checkoutError, lastReceiptTotal, isPending: createSale.isPending, onCheckout: handleCheckout };
+  const bodyProps = {
+    checkoutError,
+    lastReceiptTotal,
+    isPending: createSale.isPending,
+    onCheckout: () => {
+      setCheckoutError(null);
+      setPaymentOpen(true);
+    },
+  };
 
   return (
     <>
@@ -97,6 +108,15 @@ export function PosCart() {
           </div>
         )}
       </div>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        total={total}
+        isPending={createSale.isPending}
+        error={checkoutError}
+        onConfirm={handlePaymentConfirm}
+      />
     </>
   );
 }

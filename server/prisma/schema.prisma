@@ -274,6 +274,13 @@ model Sale {
   locationId  String
   location    Location @relation(fields: [locationId], references: [id])
   totalAmount Decimal  @default(0) @db.Decimal(14, 2)
+  // Cash tendered by the customer and change handed back — both nullable: only cash checkouts
+  // (the only payment method the POS supports today) populate them; a future non-cash payment
+  // method leaves both null rather than storing a meaningless 0. Captured for the receipt, which
+  // conventionally shows "Получено" / "Сдача" lines (see the Sale.cashReceived/changeGiven read
+  // path in report/receipt code once printing is wired up).
+  cashReceived Decimal? @db.Decimal(14, 2)
+  changeGiven  Decimal? @db.Decimal(14, 2)
   createdAt   DateTime @default(now())
 
   items SaleItem[]

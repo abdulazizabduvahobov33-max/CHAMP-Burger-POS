@@ -7,6 +7,9 @@ const saleItemSchema = z.object({
 
 export const createSaleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "Корзина пуста"),
+  // Optional: the POS's payment dialog always sends it for a cash checkout, but the field stays
+  // optional at the schema level so a future non-cash payment method isn't forced to invent one.
+  cashReceived: z.coerce.number().nonnegative("Сумма не может быть отрицательной").optional(),
 });
 
 export type SaleItemInput = z.infer<typeof saleItemSchema>;

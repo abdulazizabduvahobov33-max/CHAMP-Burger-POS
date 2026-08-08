@@ -307,7 +307,16 @@
     "searchPlaceholder": "Поиск товаров…",
     "allCategories": "Все",
     "emptyTitle": "Меню пока пусто",
-    "emptyDescription": "Товары ещё не добавлены — обратитесь к администратору"
+    "emptyDescription": "Товары ещё не добавлены — обратитесь к администратору",
+    "payment": {
+      "title": "Оплата",
+      "due": "К оплате",
+      "received": "Получено от клиента",
+      "change": "Сдача",
+      "insufficient": "Недостаточно",
+      "confirm": "Оплатить",
+      "processing": "Оформление…"
+    }
   },
   "sale": {
     "summaryRevenue": "Выручка за период",
