@@ -119,6 +119,7 @@ async function main() {
   // ── 5. Menu products + variants ─────────────────────────────
   let productCount = 0;
   let variantCount = 0;
+  let backfilledPhotos = 0;
 
   for (const item of MENU) {
     // find existing by name to keep seed idempotent
@@ -135,6 +136,14 @@ async function main() {
         },
       });
       productCount++;
+    } else if (item.imageFile && !product.imageUrl) {
+      // Same catch-up as ensureMenuSeeded.ts — a product created before menu.ts had photos
+      // assigned yet otherwise never picks one up, since this loop only ever creates new rows.
+      product = await prisma.product.update({
+        where: { id: product.id },
+        data: { imageUrl: `${UPLOADS_URL_PREFIX}${item.imageFile}` },
+      });
+      backfilledPhotos++;
     }
 
     for (const v of item.variants) {
@@ -149,7 +158,7 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Products: ${productCount} new, Variants: ${variantCount} new`);
+  console.log(`✅ Products: ${productCount} new, Variants: ${variantCount} new, Photos backfilled: ${backfilledPhotos}`);
 
   console.log("\n🎉 Seed complete.");
   console.log("────────────────────────────────────");

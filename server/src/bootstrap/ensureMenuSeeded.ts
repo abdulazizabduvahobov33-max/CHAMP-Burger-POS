@@ -37,6 +37,7 @@ export async function ensureMenuSeeded(): Promise<void> {
 
     let newProducts = 0;
     let newVariants = 0;
+    let backfilledPhotos = 0;
     for (const item of MENU) {
       let product = await prisma.product.findFirst({ where: { name: item.name } });
 
@@ -51,6 +52,16 @@ export async function ensureMenuSeeded(): Promise<void> {
           },
         });
         newProducts++;
+      } else if (item.imageFile && !product.imageUrl) {
+        // Covers a product that was created by an earlier run of this function BEFORE menu.ts
+        // had photos assigned yet (exactly what happened when the KRUNCH menu first shipped
+        // without them) — this function only ever creates new products, so without this catch-up
+        // step an already-existing row would never pick up a photo added to menu.ts later.
+        product = await prisma.product.update({
+          where: { id: product.id },
+          data: { imageUrl: `${UPLOADS_URL_PREFIX}${item.imageFile}` },
+        });
+        backfilledPhotos++;
       }
 
       for (const v of item.variants) {
@@ -64,10 +75,11 @@ export async function ensureMenuSeeded(): Promise<void> {
       }
     }
 
-    if (newCategories > 0 || newProducts > 0) {
+    if (newCategories > 0 || newProducts > 0 || backfilledPhotos > 0) {
       // eslint-disable-next-line no-console
       console.log(
-        `✅ Bootstrap: seeded menu at "${location.name}" — ${newCategories} categories, ${newProducts} products, ${newVariants} variants.`,
+        `✅ Bootstrap: seeded menu at "${location.name}" — ${newCategories} categories, ${newProducts} products, ` +
+          `${newVariants} variants, ${backfilledPhotos} photos backfilled.`,
       );
     }
   } catch (err) {
