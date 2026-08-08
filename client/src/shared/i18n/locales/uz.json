@@ -325,6 +325,15 @@
     "emptyTitle": "Hali buyurtmalar yo'q",
     "emptyDescription": "Birinchi sotuvdan keyin bu yerda cheklaringiz paydo bo'ladi"
   },
+  "printing": {
+    "print": "Chekni chop etish",
+    "reprintLast": "Chekni qayta chop etish",
+    "printing": "Chop etilmoqda…",
+    "printed": "Chek chop etishga yuborildi",
+    "printFailed": "Chekni chop etib bo'lmadi",
+    "previewTitle": "Chek ko'rinishi",
+    "previewNote": "Printer hali ulanmagan — chop etiladigan ko'rinish namoyish etilmoqda"
+  },
   "sale": {
     "summaryRevenue": "Davr uchun tushum",
     "summaryCount": "Cheklar",

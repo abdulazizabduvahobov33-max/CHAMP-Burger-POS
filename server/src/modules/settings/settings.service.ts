@@ -28,6 +28,21 @@ export async function getCompanySettings(): Promise<Record<string, string>> {
   return { ...SETTINGS_DEFAULTS, ...values };
 }
 
+// The fields needed to print a receipt (company name, address, phone, header/footer text) —
+// a narrow, deliberately public-to-any-authenticated-user subset of getCompanySettings(), which
+// is otherwise SUPER_ADMIN-only (it also carries tax_percent, currency, logo_url, and is the
+// door to the danger-zone endpoints). A SELLER prints receipts at checkout and has no admin
+// access, so this is the one piece of "settings" that has to be readable by both roles.
+const RECEIPT_FIELDS = ["cafe_name", "address", "contact_phone", "receipt_header", "receipt_footer"] as const;
+
+export async function getReceiptSettings(): Promise<Pick<Record<string, string>, (typeof RECEIPT_FIELDS)[number]>> {
+  const settings = await getCompanySettings();
+  return Object.fromEntries(RECEIPT_FIELDS.map((key) => [key, settings[key]])) as Record<
+    (typeof RECEIPT_FIELDS)[number],
+    string
+  >;
+}
+
 export async function updateCompanySettings(input: UpdateSettingsInput): Promise<Record<string, string>> {
   const entries = Object.entries(input).filter(([, value]) => value !== undefined) as [string, string | number][];
 

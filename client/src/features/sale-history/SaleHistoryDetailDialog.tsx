@@ -1,9 +1,12 @@
 import { format } from "date-fns";
+import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useMySaleDetail } from "@/entities/sale/api";
 import { formatPrice } from "@/entities/product/lib";
 import { dateFnsLocale } from "@/shared/lib/dateLocale";
+import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
+import { toast } from "@/shared/stores/toastStore";
 import { Dialog } from "@/shared/ui/Dialog";
 import { Skeleton, SkeletonTableRows } from "@/shared/ui/Skeleton";
 
@@ -18,6 +21,13 @@ type SaleHistoryDetailDialogProps = {
 export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDialogProps) {
   const { t } = useTranslation();
   const { data: sale, isLoading } = useMySaleDetail(saleId);
+  const { printReceipt } = usePrintReceipt();
+
+  async function handlePrint() {
+    if (!sale) return;
+    const result = await printReceipt(sale);
+    toast[result.ok ? "success" : "error"](t(result.ok ? "printing.printed" : "printing.printFailed"));
+  }
 
   return (
     <Dialog
@@ -73,6 +83,15 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-line py-3 text-sm font-bold text-white/70 transition hover:border-champ/50 hover:text-white"
+          >
+            <Printer className="h-4 w-4" />
+            {t("printing.print")}
+          </button>
         </div>
       )}
     </Dialog>

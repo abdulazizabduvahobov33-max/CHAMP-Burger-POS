@@ -10,6 +10,8 @@ export type CompanySettings = {
   receipt_footer: string;
 };
 
+export type ReceiptSettings = Pick<CompanySettings, "cafe_name" | "address" | "contact_phone" | "receipt_header" | "receipt_footer">;
+
 export type SecurityInfo = {
   accessTokenExpiry: string;
   refreshTokenExpiry: string;

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
+import { Minus, Plus, Printer, ShoppingCart, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCreateSale } from "@/entities/sale/api";
 import { formatPrice } from "@/entities/product/lib";
+import type { Sale } from "@/entities/sale/model";
 import { ProductImage } from "@/entities/product/ui/ProductImage";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { useCartStore, type CartLine } from "@/shared/stores/cartStore";
 import { toast } from "@/shared/stores/toastStore";
 
@@ -26,13 +28,27 @@ export function PosCart() {
   // renders of the same cart, switched by CSS breakpoint, not conditional mounting — share one
   // mutation instead of each getting its own independent "is a checkout in flight" state.
   const createSale = useCreateSale();
+  const { printReceipt } = usePrintReceipt();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [lastReceiptTotal, setLastReceiptTotal] = useState<string | null>(null);
+  // Kept separately from lastReceiptTotal (which only drives the 4s success banner) — a cashier
+  // may want to reprint a receipt well after that banner has faded, e.g. the first copy jammed
+  // or a customer asks again a minute later. Persists for the rest of the session, not on a timer.
+  const [lastSale, setLastSale] = useState<Sale | null>(null);
   const receiptTimeoutRef = useRef<number>();
 
   useEffect(() => {
     return () => window.clearTimeout(receiptTimeoutRef.current);
   }, []);
+
+  async function handlePrint(sale: Sale) {
+    const result = await printReceipt(sale);
+    if (result.ok) {
+      toast.success(t("printing.printed"));
+    } else {
+      toast.error(t("printing.printFailed"));
+    }
+  }
 
   function handlePaymentConfirm(cashReceived: number) {
     if (lines.length === 0 || createSale.isPending) return;
@@ -47,6 +63,7 @@ export function PosCart() {
           // Show what the server actually charged, not the cart's pre-checkout snapshot —
           // they can differ if a price changed while the cart was open.
           setLastReceiptTotal(sale.totalAmount);
+          setLastSale(sale);
           setMobileExpanded(false);
           window.clearTimeout(receiptTimeoutRef.current);
           receiptTimeoutRef.current = window.setTimeout(() => setLastReceiptTotal(null), 4000);
@@ -60,11 +77,13 @@ export function PosCart() {
   const bodyProps = {
     checkoutError,
     lastReceiptTotal,
+    lastSale,
     isPending: createSale.isPending,
     onCheckout: () => {
       setCheckoutError(null);
       setPaymentOpen(true);
     },
+    onPrint: handlePrint,
   };
 
   return (
@@ -124,11 +143,13 @@ export function PosCart() {
 type CartBodyProps = {
   checkoutError: string | null;
   lastReceiptTotal: string | null;
+  lastSale: Sale | null;
   isPending: boolean;
   onCheckout: () => void;
+  onPrint: (sale: Sale) => void;
 };
 
-function CartBody({ checkoutError, lastReceiptTotal, isPending, onCheckout }: CartBodyProps) {
+function CartBody({ checkoutError, lastReceiptTotal, lastSale, isPending, onCheckout, onPrint }: CartBodyProps) {
   const { t } = useTranslation();
   const lines = useCartStore((s) => s.lines);
   const incrementQuantity = useCartStore((s) => s.incrementQuantity);
@@ -145,6 +166,16 @@ function CartBody({ checkoutError, lastReceiptTotal, isPending, onCheckout }: Ca
           <div className="flex h-full flex-col items-center justify-center py-10 text-center">
             <ShoppingCart className="mb-3 h-8 w-8 text-white/15" />
             <p className="text-sm text-white/40">{t("pos.selectFromLeft")}</p>
+            {lastSale && (
+              <button
+                type="button"
+                onClick={() => onPrint(lastSale)}
+                className="mt-4 flex items-center gap-2 rounded-xl border border-ink-line px-4 py-2.5 text-sm font-medium text-white/60 transition hover:border-champ/50 hover:text-white"
+              >
+                <Printer className="h-4 w-4" />
+                {t("printing.reprintLast")}
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -169,8 +200,18 @@ function CartBody({ checkoutError, lastReceiptTotal, isPending, onCheckout }: Ca
         )}
 
         {lastReceiptTotal && !checkoutError && (
-          <div role="status" className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
-            {t("pos.saleCompleted", { total: formatPrice(lastReceiptTotal) })}
+          <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
+            <span>{t("pos.saleCompleted", { total: formatPrice(lastReceiptTotal) })}</span>
+            {lastSale && (
+              <button
+                type="button"
+                onClick={() => onPrint(lastSale)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-success/15 px-2.5 py-1.5 text-xs font-bold text-success transition hover:bg-success/25"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {t("printing.print")}
+              </button>
+            )}
           </div>
         )}
 

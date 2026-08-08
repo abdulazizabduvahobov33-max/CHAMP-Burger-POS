@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/shared/lib/api";
-import type { ClearDataSummary, SettingsResponse, SystemInfo, UpdateSettingsInput } from "./model";
+import type { ClearDataSummary, ReceiptSettings, SettingsResponse, SystemInfo, UpdateSettingsInput } from "./model";
 
 const SETTINGS_KEY = ["settings"] as const;
 
@@ -12,6 +12,20 @@ export function useSettings() {
       const { data } = await api.get<SettingsResponse>("/settings");
       return data;
     },
+  });
+}
+
+/** The narrow, SELLER-readable slice of company settings a printed receipt needs — see
+ * server/src/modules/settings/settings.service.ts's getReceiptSettings() for why this is a
+ * separate endpoint from useSettings() above (which is SUPER_ADMIN-only). */
+export function useReceiptSettings() {
+  return useQuery({
+    queryKey: ["receipt-info"],
+    queryFn: async () => {
+      const { data } = await api.get<{ settings: ReceiptSettings }>("/receipt-info");
+      return data.settings;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 

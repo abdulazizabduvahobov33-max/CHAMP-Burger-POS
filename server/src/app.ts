@@ -22,7 +22,9 @@ import supplierRoutes from "./modules/suppliers/supplier.routes.js";
 import purchaseRoutes from "./modules/purchases/purchase.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
+import { receiptInfo } from "./modules/settings/settings.controller.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
+import { asyncHandler } from "./shared/utils/asyncHandler.js";
 import { UPLOADS_DIR } from "./shared/utils/uploads.js";
 
 // `localhost` and `127.0.0.1` are different origins as far as the browser (and thus CORS)
@@ -124,6 +126,10 @@ export function createApp() {
   app.use("/api/purchases", authenticate, authorize("SUPER_ADMIN"), purchaseRoutes);
   app.use("/api/users", authenticate, authorize("SUPER_ADMIN"), userRoutes);
   app.use("/api/settings", authenticate, authorize("SUPER_ADMIN"), settingsRoutes);
+  // The one settings slice a SELLER also needs — the company/receipt text printed on every
+  // checkout. Registered separately (not nested under /api/settings) so it isn't caught by that
+  // router's SUPER_ADMIN gate above; see getReceiptSettings()'s comment for the full reasoning.
+  app.use("/api/receipt-info", authenticate, authorize("SUPER_ADMIN", "SELLER"), asyncHandler(receiptInfo));
   app.use("/api/ai", authenticate, authorize("SUPER_ADMIN"), aiRoutes);
 
   // ── Fallbacks ───────────────────────────────────────────────

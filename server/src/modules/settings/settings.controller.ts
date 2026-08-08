@@ -8,6 +8,12 @@ export async function get(_req: Request, res: Response) {
   res.json({ settings, security });
 }
 
+/** Unlike `get` above, reachable by SELLER too — see getReceiptSettings()'s comment. */
+export async function receiptInfo(_req: Request, res: Response) {
+  const settings = await settingsService.getReceiptSettings();
+  res.json({ settings });
+}
+
 export async function update(req: Request, res: Response) {
   const input = updateSettingsSchema.parse(req.body);
   const settings = await settingsService.updateCompanySettings(input);
