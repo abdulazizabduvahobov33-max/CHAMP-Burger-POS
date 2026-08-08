@@ -18,6 +18,7 @@ const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const SellerHistoryPage = lazy(() => import("@/pages/SellerHistoryPage"));
 const SellerPosPage = lazy(() => import("@/pages/SellerPosPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const StockIntakePage = lazy(() => import("@/pages/StockIntakePage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const WarehousePage = lazy(() => import("@/pages/WarehousePage"));
 
@@ -53,6 +54,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute roles={["SUPER_ADMIN"]}>
             <WarehousePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/intake"
+        element={
+          <ProtectedRoute roles={["SUPER_ADMIN"]}>
+            <StockIntakePage />
           </ProtectedRoute>
         }
       />

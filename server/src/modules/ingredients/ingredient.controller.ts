@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import * as ingredientService from "./ingredient.service.js";
 import {
+  bulkRestockSchema,
   createIngredientSchema,
   listIngredientsQuerySchema,
   movementsQuerySchema,
@@ -41,6 +42,12 @@ export async function restock(req: Request, res: Response) {
   const input = stockAmountSchema.parse(req.body);
   const ingredient = await ingredientService.restock(req.user!.locationId, req.params.id, req.user!.sub, input);
   res.json({ ingredient });
+}
+
+export async function bulkRestock(req: Request, res: Response) {
+  const input = bulkRestockSchema.parse(req.body);
+  const result = await ingredientService.bulkRestock(req.user!.locationId, req.user!.sub, input);
+  res.json(result);
 }
 
 export async function writeOff(req: Request, res: Response) {

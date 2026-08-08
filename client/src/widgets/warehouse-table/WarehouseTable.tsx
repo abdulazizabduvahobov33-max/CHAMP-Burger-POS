@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { History, PackageMinus, PackagePlus, Pencil, Plus, Search, Trash2, Warehouse } from "lucide-react";
+import { History, PackageMinus, Pencil, Plus, Search, Trash2, Warehouse } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useDeleteIngredient, useIngredients } from "@/entities/ingredient/api";
 import { formatQuantity } from "@/entities/ingredient/lib";
-import { UNIT_LABELS, UNIT_OPTIONS, type Ingredient, type Unit } from "@/entities/ingredient/model";
+import {
+  getStockStatus,
+  STOCK_STATUS_CLASSES,
+  UNIT_LABELS,
+  UNIT_OPTIONS,
+  type Ingredient,
+  type Unit,
+} from "@/entities/ingredient/model";
 import { IngredientFormDialog } from "@/features/ingredient-form/IngredientFormDialog";
 import { MovementsDialog } from "@/features/stock-movements/MovementsDialog";
-import { RestockDialog } from "@/features/stock-restock/RestockDialog";
 import { WriteOffDialog } from "@/features/stock-writeoff/WriteOffDialog";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -34,7 +40,6 @@ export function WarehouseTable() {
   });
 
   const [formTarget, setFormTarget] = useState<Ingredient | null | undefined>(undefined);
-  const [restockTarget, setRestockTarget] = useState<Ingredient | null>(null);
   const [writeOffTarget, setWriteOffTarget] = useState<Ingredient | null>(null);
   const [movementsTarget, setMovementsTarget] = useState<Ingredient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Ingredient | null>(null);
@@ -128,56 +133,60 @@ export function WarehouseTable() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-line">
-                {data.items.map((ingredient) => (
-                  <tr key={ingredient.id} className={`transition hover:bg-ink-soft/60 ${ingredient.isLow ? "bg-warn/5" : ""}`}>
-                    <td className="px-6 py-3 font-medium text-white">{ingredient.name}</td>
-                    <td className="px-6 py-3 text-white/60">{t(UNIT_LABELS[ingredient.unit])}</td>
-                    <td className={`px-6 py-3 font-semibold ${ingredient.isLow ? "text-warn" : "text-white"}`}>
-                      {formatQuantity(ingredient.quantity)}
-                    </td>
-                    <td className="px-6 py-3 text-white/50">{formatQuantity(ingredient.minQuantity)}</td>
-                    <td className="px-6 py-3">
-                      <RowActions
-                        ingredient={ingredient}
-                        onEdit={() => setFormTarget(ingredient)}
-                        onRestock={() => setRestockTarget(ingredient)}
-                        onWriteOff={() => setWriteOffTarget(ingredient)}
-                        onHistory={() => setMovementsTarget(ingredient)}
-                        onDelete={() => setDeleteTarget(ingredient)}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {data.items.map((ingredient) => {
+                  const status = getStockStatus(ingredient.quantity, ingredient.minQuantity);
+                  return (
+                    <tr key={ingredient.id} className={`transition hover:bg-ink-soft/60 ${status !== "ok" ? "bg-warn/5" : ""}`}>
+                      <td className="px-6 py-3 font-medium text-white">{ingredient.name}</td>
+                      <td className="px-6 py-3 text-white/60">{t(UNIT_LABELS[ingredient.unit])}</td>
+                      <td className={`px-6 py-3 font-semibold ${STOCK_STATUS_CLASSES[status]}`}>
+                        {formatQuantity(ingredient.quantity)}
+                      </td>
+                      <td className="px-6 py-3 text-white/50">{formatQuantity(ingredient.minQuantity)}</td>
+                      <td className="px-6 py-3">
+                        <RowActions
+                          ingredient={ingredient}
+                          onEdit={() => setFormTarget(ingredient)}
+                          onWriteOff={() => setWriteOffTarget(ingredient)}
+                          onHistory={() => setMovementsTarget(ingredient)}
+                          onDelete={() => setDeleteTarget(ingredient)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile cards */}
           <div className="space-y-3 p-4 md:hidden">
-            {data.items.map((ingredient) => (
-              <div key={ingredient.id} className="rounded-xl border border-ink-line bg-ink-soft p-4">
-                <div className="mb-2 flex items-start justify-between">
-                  <div>
-                    <p className="font-medium text-white">{ingredient.name}</p>
-                    <p className="text-xs text-white/40">{t(UNIT_LABELS[ingredient.unit])}</p>
+            {data.items.map((ingredient) => {
+              const status = getStockStatus(ingredient.quantity, ingredient.minQuantity);
+              return (
+                <div key={ingredient.id} className="rounded-xl border border-ink-line bg-ink-soft p-4">
+                  <div className="mb-2 flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-white">{ingredient.name}</p>
+                      <p className="text-xs text-white/40">{t(UNIT_LABELS[ingredient.unit])}</p>
+                    </div>
+                    <p className={`text-lg font-bold ${STOCK_STATUS_CLASSES[status]}`}>
+                      {formatQuantity(ingredient.quantity)}
+                    </p>
                   </div>
-                  <p className={`text-lg font-bold ${ingredient.isLow ? "text-warn" : "text-white"}`}>
-                    {formatQuantity(ingredient.quantity)}
+                  <p className="mb-3 text-xs text-white/40">
+                    {t("warehouse.columns.minQuantity")}: {formatQuantity(ingredient.minQuantity)} {t(UNIT_LABELS[ingredient.unit])}
                   </p>
+                  <RowActions
+                    ingredient={ingredient}
+                    onEdit={() => setFormTarget(ingredient)}
+                    onWriteOff={() => setWriteOffTarget(ingredient)}
+                    onHistory={() => setMovementsTarget(ingredient)}
+                    onDelete={() => setDeleteTarget(ingredient)}
+                  />
                 </div>
-                <p className="mb-3 text-xs text-white/40">
-                  {t("warehouse.columns.minQuantity")}: {formatQuantity(ingredient.minQuantity)} {t(UNIT_LABELS[ingredient.unit])}
-                </p>
-                <RowActions
-                  ingredient={ingredient}
-                  onEdit={() => setFormTarget(ingredient)}
-                  onRestock={() => setRestockTarget(ingredient)}
-                  onWriteOff={() => setWriteOffTarget(ingredient)}
-                  onHistory={() => setMovementsTarget(ingredient)}
-                  onDelete={() => setDeleteTarget(ingredient)}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onPageChange={setPage} />
@@ -185,7 +194,6 @@ export function WarehouseTable() {
       )}
 
       <IngredientFormDialog open={formTarget !== undefined} onClose={() => setFormTarget(undefined)} ingredient={formTarget} />
-      <RestockDialog open={restockTarget !== null} onClose={() => setRestockTarget(null)} ingredient={restockTarget} />
       <WriteOffDialog open={writeOffTarget !== null} onClose={() => setWriteOffTarget(null)} ingredient={writeOffTarget} />
       <MovementsDialog open={movementsTarget !== null} onClose={() => setMovementsTarget(null)} ingredient={movementsTarget} />
       <ConfirmDialog
@@ -208,14 +216,12 @@ export function WarehouseTable() {
 function RowActions({
   ingredient,
   onEdit,
-  onRestock,
   onWriteOff,
   onHistory,
   onDelete,
 }: {
   ingredient: Ingredient;
   onEdit: () => void;
-  onRestock: () => void;
   onWriteOff: () => void;
   onHistory: () => void;
   onDelete: () => void;
@@ -223,9 +229,6 @@ function RowActions({
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1">
-      <IconButton label={t("warehouse.restock")} onClick={onRestock}>
-        <PackagePlus className="h-4 w-4" />
-      </IconButton>
       <IconButton label={t("warehouse.writeOff")} onClick={onWriteOff} disabled={Number(ingredient.quantity) <= 0}>
         <PackageMinus className="h-4 w-4" />
       </IconButton>

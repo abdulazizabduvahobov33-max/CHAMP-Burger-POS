@@ -71,3 +71,45 @@ export type StockAmountInput = {
   quantity: number;
   note?: string;
 };
+
+export type BulkRestockItem = {
+  ingredientId: string;
+  quantity: number;
+  note?: string;
+};
+
+export type BulkRestockInput = {
+  items: BulkRestockItem[];
+};
+
+// Three-way status derived client-side from quantity vs minQuantity — a finer read than the
+// server's `isLow` boolean (which only distinguishes "below minimum" from "not"), used by the
+// stock-intake grid and the ingredient directory to color-code rows.
+export type StockStatus = "out" | "low" | "ok";
+
+export function getStockStatus(quantity: string, minQuantity: string): StockStatus {
+  const qty = Number(quantity);
+  if (qty <= 0) return "out";
+  if (qty < Number(minQuantity)) return "low";
+  return "ok";
+}
+
+export const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
+  out: "warehouse.status.out",
+  low: "warehouse.status.low",
+  ok: "warehouse.status.ok",
+};
+
+export const STOCK_STATUS_CLASSES: Record<StockStatus, string> = {
+  out: "text-danger-soft",
+  low: "text-warn",
+  ok: "text-success",
+};
+
+// Background + text combo for pill badges (stock-intake grid) — text-only variant above is for
+// table cells / big numbers where a filled background would be too heavy.
+export const STOCK_STATUS_BADGE_CLASSES: Record<StockStatus, string> = {
+  out: "bg-danger/10 text-danger-soft",
+  low: "bg-warn/10 text-warn",
+  ok: "bg-success/10 text-success",
+};

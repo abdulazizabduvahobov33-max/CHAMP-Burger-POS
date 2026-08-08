@@ -21,7 +21,9 @@ export const listIngredientsQuerySchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  // Max bumped from 100 — the stock-intake page loads every active ingredient in one request
+  // (a bulk-restock grid needs the full catalog on screen, not a paginated slice).
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
 });
 
 export const stockAmountSchema = z.object({
@@ -34,8 +36,21 @@ export const movementsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const bulkRestockSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        ingredientId: z.string().min(1),
+        quantity: z.coerce.number().positive("Количество должно быть больше нуля"),
+        note: z.string().trim().max(300).optional(),
+      }),
+    )
+    .min(1, "Добавьте хотя бы один ингредиент"),
+});
+
 export type CreateIngredientInput = z.infer<typeof createIngredientSchema>;
 export type UpdateIngredientInput = z.infer<typeof updateIngredientSchema>;
 export type ListIngredientsQuery = z.infer<typeof listIngredientsQuerySchema>;
 export type StockAmountInput = z.infer<typeof stockAmountSchema>;
 export type MovementsQuery = z.infer<typeof movementsQuerySchema>;
+export type BulkRestockInput = z.infer<typeof bulkRestockSchema>;

@@ -10,6 +10,7 @@ router.post("/", asyncHandler(controller.create));
 router.get("/:id", asyncHandler(controller.getOne));
 router.patch("/:id", asyncHandler(controller.update));
 router.delete("/:id", asyncHandler(controller.remove));
+router.post("/bulk-restock", asyncHandler(controller.bulkRestock));
 router.post("/:id/restock", asyncHandler(controller.restock));
 router.post("/:id/write-off", asyncHandler(controller.writeOff));
 router.get("/:id/movements", asyncHandler(controller.movements));

@@ -4,6 +4,7 @@ import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
 import { isUniqueViolation } from "../../shared/utils/prismaErrors.js";
 import type {
+  BulkRestockInput,
   CreateIngredientInput,
   ListIngredientsQuery,
   MovementsQuery,
@@ -187,6 +188,49 @@ export async function restock(locationId: string, ingredientId: string, userId: 
   });
 
   return getIngredient(locationId, ingredientId);
+}
+
+/**
+ * Stock-intake page: restock many ingredients in one shot (supplier delivery day) instead of
+ * one dialog per ingredient. Same before/after bookkeeping as the single-item `restock` above,
+ * just looped inside one transaction so a failure partway through (e.g. a deactivated
+ * ingredient) rolls back every line rather than leaving a half-applied delivery — mirrors
+ * createPurchase's shape in the purchases module, minus the cost/supplier accounting that
+ * module exists for (this endpoint only moves quantity, not money).
+ */
+export async function bulkRestock(locationId: string, userId: string, input: BulkRestockInput) {
+  await prisma.$transaction(async (tx) => {
+    const ingredientIds = [...new Set(input.items.map((i) => i.ingredientId))];
+    const ingredients = await tx.ingredient.findMany({ where: { id: { in: ingredientIds }, isActive: true } });
+    if (ingredients.length !== ingredientIds.length) {
+      throw new AppError(422, "INVALID_INGREDIENT", "Один или несколько ингредиентов не найдены");
+    }
+
+    for (const item of input.items) {
+      const stock = await tx.stock.upsert({
+        where: { ingredientId_locationId: { ingredientId: item.ingredientId, locationId } },
+        create: { ingredientId: item.ingredientId, locationId, quantity: item.quantity },
+        update: { quantity: { increment: item.quantity } },
+      });
+      const after = stock.quantity;
+      const before = after.minus(item.quantity);
+
+      await tx.stockMovement.create({
+        data: {
+          ingredientId: item.ingredientId,
+          locationId,
+          change: item.quantity,
+          quantityBefore: before,
+          quantityAfter: after,
+          reason: "PURCHASE",
+          note: item.note,
+          createdById: userId,
+        },
+      });
+    }
+  });
+
+  return { count: input.items.length };
 }
 
 export async function writeOff(locationId: string, ingredientId: string, userId: string, input: StockAmountInput) {

@@ -66,7 +66,8 @@
     "sections": {
       "reports": { "title": "Hisobotlar", "subtitle": "Sotuvlar tahlili va statistika" },
       "products": { "title": "Mahsulotlar", "subtitle": "Menyu va kategoriyalarni boshqarish" },
-      "warehouse": { "title": "Ombor", "subtitle": "Ingredientlar va qoldiqlar" },
+      "warehouse": { "title": "Ombor", "subtitle": "Ingredientlar spravochnigi" },
+      "intake": { "title": "Tovar kirimi", "subtitle": "Omborni tez to'ldirish" },
       "purchases": { "title": "Xaridlar", "subtitle": "Yetkazib berishlar va yetkazib beruvchilar" },
       "profit": { "title": "Foyda", "subtitle": "Tannarx va marja" },
       "users": { "title": "Foydalanuvchilar", "subtitle": "Xodimlar va rollar" },
@@ -518,6 +519,37 @@
       "balance": "Qoldiq",
       "who": "Kim",
       "comment": "Izoh"
+    },
+    "status": {
+      "out": "Mavjud emas",
+      "low": "Tugayapti",
+      "ok": "Mavjud"
     }
+  },
+  "intake": {
+    "title": "Tovar kirimi",
+    "subtitle": "Yetkazib beruvchi nima olib kelganini belgilang va bitta amal bilan saqlang",
+    "backToDirectory": "Ingredientlar spravochnigi",
+    "statsTotal": "Jami ingredientlar",
+    "statsLow": "Tugayapti",
+    "statsOut": "Mavjud emas",
+    "searchPlaceholder": "Nomi bo'yicha qidirish…",
+    "allUnits": "Barcha o'lchov birliklari",
+    "lowOnly": "Faqat tugayotganlar",
+    "outOnly": "Faqat mavjud bo'lmaganlar",
+    "currentStock": "Qoldiq",
+    "decrease": "Kamaytirish",
+    "increase": "Ko'paytirish",
+    "save": "Kirimni saqlash",
+    "saveWithCount": "Kirimni saqlash ({{count}})",
+    "saving": "Saqlanmoqda…",
+    "saveSuccess": "Kirim saqlandi: {{count}} ta pozitsiya",
+    "saveFailed": "Kirimni saqlab bo'lmadi",
+    "clearAll": "Hammasini tozalash",
+    "empty": "Hech narsa topilmadi",
+    "emptyDescription": "Qidiruv filtrlarini o'zgartiring",
+    "noIngredientsTitle": "Ingredientlar spravochnigi bo'sh",
+    "noIngredientsDescription": "Avval spravochnikka ingredientlar qo'shing",
+    "loadError": "Omborni yuklab bo'lmadi"
   }
 }

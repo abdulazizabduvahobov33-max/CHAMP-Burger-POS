@@ -1,5 +1,5 @@
 ﻿import { Link } from "react-router-dom";
-import { AlertTriangle, BarChart3, Bot, Receipt, Settings, ShoppingBasket, TrendingUp, Truck, Users, Warehouse, type LucideIcon } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, PackagePlus, Receipt, Settings, ShoppingBasket, TrendingUp, Truck, Users, Warehouse, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useDashboardSummary } from "@/entities/report/api";
@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
           isLoading={summaryLoading}
         />
         <KpiCard
-          to="/admin/warehouse"
+          to="/admin/intake"
           icon={AlertTriangle}
           label={t("dashboard.lowStock")}
           value={lowStock ? String(lowStock.total) : undefined}
@@ -81,6 +81,7 @@ export default function AdminDashboardPage() {
         <DashboardCard to="/admin/reports" icon={BarChart3} title={t("dashboard.sections.reports.title")} subtitle={t("dashboard.sections.reports.subtitle")} />
         <DashboardCard to="/admin/products" icon={ShoppingBasket} title={t("dashboard.sections.products.title")} subtitle={t("dashboard.sections.products.subtitle")} />
         <DashboardCard to="/admin/warehouse" icon={Warehouse} title={t("dashboard.sections.warehouse.title")} subtitle={t("dashboard.sections.warehouse.subtitle")} />
+        <DashboardCard to="/admin/intake" icon={PackagePlus} title={t("dashboard.sections.intake.title")} subtitle={t("dashboard.sections.intake.subtitle")} />
         <DashboardCard to="/admin/purchases" icon={Truck} title={t("dashboard.sections.purchases.title")} subtitle={t("dashboard.sections.purchases.subtitle")} />
         <DashboardCard to="/admin/profit" icon={TrendingUp} title={t("dashboard.sections.profit.title")} subtitle={t("dashboard.sections.profit.subtitle")} />
         <DashboardCard to="/admin/users" icon={Users} title={t("dashboard.sections.users.title")} subtitle={t("dashboard.sections.users.subtitle")} />

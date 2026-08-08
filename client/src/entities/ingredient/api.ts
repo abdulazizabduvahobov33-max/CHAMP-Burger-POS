@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@ta
 
 import { api } from "@/shared/lib/api";
 import type {
+  BulkRestockInput,
   Ingredient,
   IngredientFormInput,
   IngredientListQuery,
@@ -100,6 +101,20 @@ export function useRestockIngredient(id: string) {
       queryClient.invalidateQueries({ queryKey: INGREDIENTS_KEY });
       queryClient.invalidateQueries({ queryKey: movementsKey(ingredient.id) });
     },
+  });
+}
+
+export function useBulkRestockIngredients() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: BulkRestockInput) => {
+      const { data } = await api.post<{ count: number }>("/ingredients/bulk-restock", input);
+      return data;
+    },
+    // Invalidating the ["ingredients"] prefix also catches every mounted ["ingredients", id,
+    // "movements"] query (TanStack Query matches by key prefix), same as the single-item
+    // restock/write-off mutations above.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: INGREDIENTS_KEY }),
   });
 }
 
