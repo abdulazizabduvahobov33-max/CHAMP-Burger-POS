@@ -7,6 +7,7 @@ import { useIngredients } from "@/entities/ingredient/api";
 import { formatPrice, profitColorClass } from "@/entities/product/lib";
 import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { BrandMark } from "@/shared/ui/BrandMark";
@@ -26,10 +27,12 @@ export default function AdminDashboardPage() {
           <BrandMark size={32} />
           <h1 className="text-xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <ChangePasswordButton />
-          <ThemeToggleButton />
-          <LanguageSwitcher />
+        <div className="ml-auto flex items-center gap-2">
+          <HeaderOverflowMenu>
+            <ChangePasswordButton />
+            <ThemeToggleButton />
+            <LanguageSwitcher />
+          </HeaderOverflowMenu>
           <LogoutButton />
         </div>
       </header>

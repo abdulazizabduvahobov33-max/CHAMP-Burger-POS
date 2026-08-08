@@ -10,6 +10,7 @@ import { SaleHistoryDetailDialog } from "@/features/sale-history/SaleHistoryDeta
 import { dateFnsLocale } from "@/shared/lib/dateLocale";
 import { BrandMark } from "@/shared/ui/BrandMark";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { Pagination } from "@/shared/ui/Pagination";
 import { Skeleton } from "@/shared/ui/Skeleton";
@@ -39,9 +40,11 @@ export default function SellerHistoryPage() {
             <h1 className="text-lg font-bold tracking-tight sm:text-xl">{t("history.title")}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggleButton />
-          <LanguageSwitcher />
+        <div className="ml-auto flex items-center gap-2">
+          <HeaderOverflowMenu>
+            <ThemeToggleButton />
+            <LanguageSwitcher />
+          </HeaderOverflowMenu>
         </div>
       </header>
 

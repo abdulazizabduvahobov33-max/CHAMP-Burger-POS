@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { BrandMark } from "@/shared/ui/BrandMark";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
@@ -26,9 +27,11 @@ export default function AiAssistantPage() {
             <h1 className="text-xl font-bold tracking-tight">{t("ai.title")}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggleButton />
-          <LanguageSwitcher />
+        <div className="ml-auto flex items-center gap-2">
+          <HeaderOverflowMenu>
+            <ThemeToggleButton />
+            <LanguageSwitcher />
+          </HeaderOverflowMenu>
           <LogoutButton />
         </div>
       </header>

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { BrandMark } from "@/shared/ui/BrandMark";
@@ -22,7 +23,7 @@ export default function SellerPosPage() {
           <BrandMark size={28} />
           <h1 className="text-lg font-bold tracking-tight sm:text-xl">POS</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-3">
           <span className="hidden text-sm text-white/50 sm:inline">{user?.name}</span>
           <Link
             to="/pos/history"
@@ -32,9 +33,11 @@ export default function SellerPosPage() {
           >
             <Receipt className="h-4 w-4" />
           </Link>
-          <ChangePasswordButton />
-          <ThemeToggleButton />
-          <LanguageSwitcher />
+          <HeaderOverflowMenu>
+            <ChangePasswordButton />
+            <ThemeToggleButton />
+            <LanguageSwitcher />
+          </HeaderOverflowMenu>
           <LogoutButton />
         </div>
       </header>

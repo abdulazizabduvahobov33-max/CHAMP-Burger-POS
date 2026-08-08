@@ -18,13 +18,12 @@ type SaleHistoryDetailDialogProps = {
 export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDialogProps) {
   const { t } = useTranslation();
   const { data: sale, isLoading } = useMySaleDetail(saleId);
-  const receiptNumber = saleId ? `#${saleId.slice(-6).toUpperCase()}` : "";
 
   return (
     <Dialog
       open={saleId !== null}
       onClose={onClose}
-      title={sale ? t("sale.detailTitle", { number: receiptNumber }) : t("sale.detailTitleDefault")}
+      title={sale ? t("sale.detailTitle", { number: sale.receiptNumber }) : t("sale.detailTitleDefault")}
       widthClassName="max-w-md"
     >
       {isLoading && (

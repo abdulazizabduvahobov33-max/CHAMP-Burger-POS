@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
 import { resolveDateRange } from "../../shared/utils/dateRange.js";
+import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { computeProfitStats, getVariantCostMap, unitCostOf, ZERO } from "./report.costing.js";
 import type {
   IngredientAnalyticsQuery,
@@ -48,10 +49,6 @@ export async function getDashboardSummary(locationId: string) {
     totalProfit: allTimeStats.profit,
     profitMargin: allTimeStats.margin,
   };
-}
-
-function shortReceiptNumber(id: string): string {
-  return `#${id.slice(-6).toUpperCase()}`;
 }
 
 /**

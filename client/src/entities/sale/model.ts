@@ -20,6 +20,7 @@ export type SaleItemResult = {
 
 export type Sale = {
   id: string;
+  receiptNumber: string;
   totalAmount: string;
   cashReceived: string | null;
   changeGiven: string | null;

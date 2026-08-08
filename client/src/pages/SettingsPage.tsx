@@ -7,6 +7,7 @@ import { useClearData, useSettings, useSystemInfo, useUpdateSettings } from "@/e
 import type { ClearDataSummary, CompanySettings } from "@/entities/setting/model";
 import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -111,10 +112,12 @@ export default function SettingsPage() {
             <h1 className="text-xl font-bold tracking-tight">{t("dashboard.sections.settings.title")}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ChangePasswordButton />
-          <ThemeToggleButton />
-          <LanguageSwitcher />
+        <div className="ml-auto flex items-center gap-2">
+          <HeaderOverflowMenu>
+            <ChangePasswordButton />
+            <ThemeToggleButton />
+            <LanguageSwitcher />
+          </HeaderOverflowMenu>
           <LogoutButton />
         </div>
       </header>

@@ -1,5 +1,6 @@
 {
   "common": {
+    "moreActions": "Ещё",
     "save": "Сохранить",
     "saving": "Сохранение…",
     "cancel": "Отмена",

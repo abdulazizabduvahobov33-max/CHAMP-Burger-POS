@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
+import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { deductRecipeIngredients } from "../recipes/recipe.service.js";
 import type { SaleItemInput } from "./sale.schema.js";
 
@@ -12,6 +13,7 @@ type SaleWithItems = Prisma.SaleGetPayload<{
 function serializeSale(sale: SaleWithItems) {
   return {
     id: sale.id,
+    receiptNumber: shortReceiptNumber(sale.id),
     totalAmount: sale.totalAmount.toString(),
     cashReceived: sale.cashReceived?.toString() ?? null,
     changeGiven: sale.changeGiven?.toString() ?? null,
@@ -34,10 +36,6 @@ export async function getSale(id: string) {
     include: { items: { include: { variant: { include: { product: true } } } } },
   });
   return serializeSale(sale);
-}
-
-function shortReceiptNumber(id: string): string {
-  return `#${id.slice(-6).toUpperCase()}`;
 }
 
 /**
