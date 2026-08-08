@@ -18,6 +18,7 @@ import { PrismaClient, Role, SaleType } from "@prisma/client";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 
+import { BASELINE_INGREDIENTS } from "../src/bootstrap/ingredients.js";
 import { MENU } from "../src/bootstrap/menu.js";
 import { UPLOADS_URL_PREFIX } from "../src/shared/utils/uploads.js";
 
@@ -159,6 +160,24 @@ async function main() {
     }
   }
   console.log(`✅ Products: ${productCount} new, Variants: ${variantCount} new, Photos backfilled: ${backfilledPhotos}`);
+
+  // ── 6. Baseline ingredients ──────────────────────────────────
+  // Same idempotent shape as products above (findFirst by case-insensitive name, then create) —
+  // Ingredient has no @unique on name at the Prisma level either, see ingredient.service.ts.
+  let ingredientCount = 0;
+  for (const item of BASELINE_INGREDIENTS) {
+    const existing = await prisma.ingredient.findFirst({
+      where: { isActive: true, name: { equals: item.name, mode: "insensitive" } },
+    });
+    if (existing) continue;
+
+    const ingredient = await prisma.ingredient.create({
+      data: { name: item.name, unit: item.unit, minQuantity: item.minQuantity },
+    });
+    await prisma.stock.create({ data: { ingredientId: ingredient.id, locationId: location.id, quantity: 0 } });
+    ingredientCount++;
+  }
+  console.log(`✅ Ingredients: ${ingredientCount} new`);
 
   console.log("\n🎉 Seed complete.");
   console.log("────────────────────────────────────");
