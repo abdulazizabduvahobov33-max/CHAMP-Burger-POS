@@ -9,7 +9,7 @@ type ProductImageProps = {
   className?: string;
 };
 
-/** Product photo with lazy loading, a smooth fade-in once decoded, and a branded CHAMP
+/** Product photo with lazy loading, a smooth fade-in once decoded, and a branded
  * placeholder — shown both when there's no photo yet and if the URL fails to load, so a
  * broken/moved upload never renders as a native broken-image icon. */
 export function ProductImage({ src, alt, className = "" }: ProductImageProps) {

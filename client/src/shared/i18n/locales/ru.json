@@ -408,14 +408,14 @@
   "pwa": {
     "updateAvailable": "Доступно обновление приложения",
     "updateNow": "Обновить",
-    "installPrompt": "Установите CHAMP POS как приложение",
+    "installPrompt": "Установите KRUNCH POS как приложение",
     "install": "Установить"
   },
   "ai": {
     "title": "ИИ-Помощник",
     "subtitle": "Спросите о продажах, прибыли, складе — или сообщите о расходе",
     "localModeBadge": "Бесплатный режим",
-    "assistantName": "CHAMP AI",
+    "assistantName": "KRUNCH AI",
     "you": "Вы",
     "inputPlaceholder": "Напишите сообщение…",
     "inputAriaLabel": "Сообщение для ИИ-помощника",

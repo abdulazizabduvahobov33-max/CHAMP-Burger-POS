@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+﻿import { useEffect, useRef, useState, type FormEvent } from "react";
 import { format } from "date-fns";
 import { MessageCircle, Send, Sparkles, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +8,7 @@ import type { AiMessage } from "@/entities/ai/model";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { dateFnsLocale } from "@/shared/lib/dateLocale";
 import { toast } from "@/shared/stores/toastStore";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/shared/ui/Skeleton";
@@ -46,7 +46,7 @@ export function AiChatWidget() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-card bg-ink-card shadow-card">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-ink-line p-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <ChampMark size={32} />
+          <BrandMark size={32} />
           <div>
             <p className="text-sm font-bold text-white">{t("ai.assistantName")}</p>
             <span className="inline-flex items-center gap-1 text-xs text-champ">
@@ -158,7 +158,7 @@ function MessageBubble({ message }: { message: AiMessage }) {
   const isUser = message.role === "user";
   return (
     <div className={`flex animate-fade-in items-end gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
-      {!isUser && <ChampMark size={26} className="mb-5 shrink-0" />}
+      {!isUser && <BrandMark size={26} className="mb-5 shrink-0" />}
       <div className={`flex max-w-[85%] flex-col sm:max-w-[75%] ${isUser ? "items-end" : "items-start"}`}>
         <div
           className={`whitespace-pre-line rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
@@ -177,7 +177,7 @@ function TypingIndicator() {
   const { t } = useTranslation();
   return (
     <div className="flex animate-fade-in items-end gap-2.5">
-      <ChampMark size={26} className="mb-1 shrink-0" />
+      <BrandMark size={26} className="mb-1 shrink-0" />
       <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-ink-soft px-4 py-3">
         <span className="sr-only">{t("ai.thinking")}</span>
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/40 [animation-delay:-0.3s]" />

@@ -1,11 +1,11 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { WarehouseTable } from "@/widgets/warehouse-table/WarehouseTable";
 
 export default function WarehousePage() {
@@ -14,7 +14,7 @@ export default function WarehousePage() {
     <div className="min-h-full p-6 [padding-top:max(1.5rem,env(safe-area-inset-top))] [padding-left:max(1.5rem,env(safe-area-inset-left))] [padding-right:max(1.5rem,env(safe-area-inset-right))] [padding-bottom:max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <ChampMark size={28} />
+          <BrandMark size={28} />
           <div>
             <div className="flex items-center gap-2">
               <Link

@@ -12,9 +12,9 @@ export default defineConfig({
       includeAssets: ["icons/favicon-32.png", "icons/apple-touch-icon.png"],
       manifest: {
         id: "/",
-        name: "CHAMP Burger — POS + Inventory",
-        short_name: "CHAMP POS",
-        description: "POS и учёт склада для CHAMP Burger",
+        name: "KRUNCH — POS + Inventory",
+        short_name: "KRUNCH POS",
+        description: "POS и учёт склада для KRUNCH",
         start_url: "/",
         scope: "/",
         display: "standalone",

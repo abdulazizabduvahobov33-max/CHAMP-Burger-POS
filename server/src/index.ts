@@ -14,7 +14,7 @@ async function bootstrap() {
   const server = app.listen(env.port, () => {
     // eslint-disable-next-line no-console
     console.log(
-      `\n🚀 CHAMP POS server ready\n` +
+      `\n🚀 KRUNCH POS server ready\n` +
         `   http://localhost:${env.port}/api/health\n` +
         `   env: ${env.nodeEnv}\n`,
     );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { DateRangeFilter } from "@/features/report-date-filter/DateRangeFilter";
 import { useProfitSummary } from "@/entities/report/api";
 import { formatPrice, profitColorClass } from "@/entities/product/lib";
@@ -22,7 +22,7 @@ export default function ProfitPage() {
     <div className="min-h-full p-6 [padding-top:max(1.5rem,env(safe-area-inset-top))] [padding-left:max(1.5rem,env(safe-area-inset-left))] [padding-right:max(1.5rem,env(safe-area-inset-right))] [padding-bottom:max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <ChampMark size={28} />
+          <BrandMark size={28} />
           <div className="flex items-center gap-2">
             <Link
               to="/admin"
@@ -104,7 +104,7 @@ function StatCard({
   return (
     <div className="rounded-card bg-ink-card p-4 shadow-card sm:p-5">
       <p className="truncate text-xs uppercase tracking-wide text-white/40">{label}</p>
-      <p className={`mt-2 text-xl font-bold sm:text-2xl ${accentClass ?? "text-white"}`}>{isLoading ? "…" : value}</p>
+      <p className={`mt-2 text-xl font-bold sm:text-2xl ${accentClass ?? "text-white"}`}>{isLoading ? "вЂ¦" : value}</p>
     </div>
   );
 }

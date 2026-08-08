@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { AiChatWidget } from "@/widgets/ai-chat/AiChatWidget";
@@ -14,7 +14,7 @@ export default function AiAssistantPage() {
     <div className="flex h-full min-h-0 flex-col p-4 [padding-top:max(1rem,env(safe-area-inset-top))] [padding-left:max(1rem,env(safe-area-inset-left))] [padding-right:max(1rem,env(safe-area-inset-right))] [padding-bottom:max(1rem,env(safe-area-inset-bottom))] sm:p-6">
       <header className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-4 sm:mb-6">
         <div className="flex items-center gap-3">
-          <ChampMark size={28} />
+          <BrandMark size={28} />
           <div className="flex items-center gap-2">
             <Link
               to="/admin"

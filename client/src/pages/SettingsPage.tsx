@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+﻿import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, ImagePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { toast } from "@/shared/stores/toastStore";
 import { Skeleton } from "@/shared/ui/Skeleton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 
 type FormState = CompanySettings;
 
@@ -99,7 +99,7 @@ export default function SettingsPage() {
     <div className="min-h-full p-6 [padding-top:max(1.5rem,env(safe-area-inset-top))] [padding-left:max(1.5rem,env(safe-area-inset-left))] [padding-right:max(1.5rem,env(safe-area-inset-right))] [padding-bottom:max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <ChampMark size={28} />
+          <BrandMark size={28} />
           <div className="flex items-center gap-2">
             <Link
               to="/admin"
@@ -310,11 +310,11 @@ function SecuritySection({ expiry }: { expiry?: { accessTokenExpiry: string; ref
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-ink-line bg-ink-soft p-4">
           <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.accessToken")}</p>
-          <p className="mt-1 text-lg font-bold text-white">{expiry?.accessTokenExpiry ?? "…"}</p>
+          <p className="mt-1 text-lg font-bold text-white">{expiry?.accessTokenExpiry ?? "вЂ¦"}</p>
         </div>
         <div className="rounded-xl border border-ink-line bg-ink-soft p-4">
           <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.refreshToken")}</p>
-          <p className="mt-1 text-lg font-bold text-white">{expiry?.refreshTokenExpiry ?? "…"}</p>
+          <p className="mt-1 text-lg font-bold text-white">{expiry?.refreshTokenExpiry ?? "вЂ¦"}</p>
         </div>
       </div>
     </section>
@@ -362,7 +362,7 @@ function SystemInfoSection() {
   );
 }
 
-/** SUPER_ADMIN-only — the whole /admin/settings route is already role-gated (see
+/** SUPER_ADMIN-only вЂ” the whole /admin/settings route is already role-gated (see
  * app/routes.tsx), but this section is destructive enough to double-check locally too, in
  * case this component is ever reused somewhere less strictly guarded. */
 function DangerZoneSection() {

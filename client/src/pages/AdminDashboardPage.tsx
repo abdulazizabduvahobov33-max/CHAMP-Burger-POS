@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { AlertTriangle, BarChart3, Bot, Receipt, Settings, ShoppingBasket, TrendingUp, Truck, Users, Warehouse, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +9,7 @@ import { ChangePasswordButton } from "@/features/change-password/ChangePasswordB
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { useAuthStore } from "@/shared/stores/authStore";
 
@@ -23,7 +23,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-full p-6 [padding-top:max(1.5rem,env(safe-area-inset-top))] [padding-left:max(1.5rem,env(safe-area-inset-left))] [padding-right:max(1.5rem,env(safe-area-inset-right))] [padding-bottom:max(1.5rem,env(safe-area-inset-bottom))]">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <ChampMark size={32} />
+          <BrandMark size={32} />
           <h1 className="text-xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         </div>
         <div className="flex items-center gap-2">

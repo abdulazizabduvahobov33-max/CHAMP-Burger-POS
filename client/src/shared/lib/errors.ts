@@ -19,7 +19,7 @@ export function getErrorMessage(error: unknown, fallback = i18n.t("common.generi
     // message too instead of a completely generic string that gives no lead at all.
     if (error.response) {
       // eslint-disable-next-line no-console
-      console.error("[CHAMP] API error without a structured message:", {
+      console.error("[KRUNCH] API error without a structured message:", {
         url: (error.config?.baseURL ?? "") + (error.config?.url ?? ""),
         method: error.config?.method,
         status: error.response.status,

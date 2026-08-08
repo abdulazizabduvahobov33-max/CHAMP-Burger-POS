@@ -5,15 +5,17 @@
 @layer base {
   /*
    * Theme tokens as space-separated RGB triplets (required by Tailwind's `<alpha-value>`
-   * substitution — see tailwind.config.ts). Dark is the default/original CHAMP look, defined
+   * substitution — see tailwind.config.ts). Dark is the default theme, defined
    * on :root; [data-theme="light"] (set by ThemeProvider, shared/providers/ThemeProvider.tsx)
    * overrides them. `--color-onaccent` intentionally does NOT change between themes — text on
    * a bright champ/success/danger surface must stay dark regardless of theme.
    */
   :root {
-    /* Dark theme — graphite surfaces (neutral, not tinted) with the signature CHAMP gold
-     * accent: a fast-food-commercial palette (gold/graphite/warm white + orange accents)
-     * instead of the earlier generic SaaS emerald look. */
+    /* Dark theme — graphite surfaces (neutral, not tinted) with the KRUNCH red-orange "flame"
+     * accent (`--color-champ*` — token name kept as-is post-rebrand; see tailwind.config.ts for
+     * why renaming it wasn't worth the blast radius). Danger is pushed toward rose and warn
+     * toward amber specifically so neither reads as "the same color" as the brand accent —
+     * all three sit within ~15° of each other on a pure orange-red hue wheel otherwise. */
     --color-bg: 28 28 30;
     --color-bg-soft: 36 36 38;
     --color-bg-card: 44 44 47;
@@ -23,18 +25,18 @@
      * needs a dark foreground to clear WCAG AA (4.5:1) against those mid-brightness saturated
      * colors; white text on them measures ~2.3-3.8:1 and fails. See theme-tokens comment above. */
     --color-onaccent: 20 18 14;
-    --color-champ: 224 166 58;
-    --color-champ-hover: 240 193 104;
-    --color-champ-dark: 184 132 42;
-    --color-danger: 239 68 68;
-    --color-danger-soft: 248 113 113;
+    --color-champ: 255 90 54;
+    --color-champ-hover: 255 138 92;
+    --color-champ-dark: 217 63 30;
+    --color-danger: 244 63 94;
+    --color-danger-soft: 251 113 133;
     --color-success: 34 197 94;
-    --color-warn: 255 122 61;
+    --color-warn: 245 165 36;
     color-scheme: dark;
   }
 
   [data-theme="light"] {
-    /* Light theme — warm cream/white surfaces, white cards, a deeper bronze-gold accent for
+    /* Light theme — warm cream/white surfaces, white cards, a deeper burnt-orange accent for
      * contrast against the pale background. */
     --color-bg: 251 248 243;
     --color-bg-soft: 243 238 229;
@@ -42,13 +44,13 @@
     --color-bg-line: 232 224 210;
     --color-fg: 42 38 34;
     --color-onaccent: 20 18 14;
-    --color-champ: 170 120 30;
-    --color-champ-hover: 196 146 47;
-    --color-champ-dark: 138 95 20;
-    --color-danger: 220 38 38;
-    --color-danger-soft: 190 40 40;
+    --color-champ: 217 90 40;
+    --color-champ-hover: 232 122 70;
+    --color-champ-dark: 184 72 30;
+    --color-danger: 225 29 72;
+    --color-danger-soft: 190 18 60;
     --color-success: 22 163 74;
-    --color-warn: 217 89 31;
+    --color-warn: 180 108 20;
     color-scheme: light;
   }
 

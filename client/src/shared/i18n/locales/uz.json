@@ -408,14 +408,14 @@
   "pwa": {
     "updateAvailable": "Ilova yangilanishi mavjud",
     "updateNow": "Yangilash",
-    "installPrompt": "CHAMP POS ilovasini o'rnating",
+    "installPrompt": "KRUNCH POS ilovasini o'rnating",
     "install": "O'rnatish"
   },
   "ai": {
     "title": "AI Yordamchi",
     "subtitle": "Sotuvlar, foyda, ombor haqida so'rang — yoki xarajat haqida xabar bering",
     "localModeBadge": "Bepul rejim",
-    "assistantName": "CHAMP AI",
+    "assistantName": "KRUNCH AI",
     "you": "Siz",
     "inputPlaceholder": "Xabar yozing…",
     "inputAriaLabel": "AI yordamchi uchun xabar",

@@ -1,11 +1,12 @@
 import type { Config } from "tailwindcss";
 
 /**
- * CHAMP Burger design tokens.
- * Palette taken from the physical menu board:
- *   • ink        — near-black background of the board
- *   • champ      — signature CHAMP yellow (price pills, logo)
- *   • danger     — red used only for destructive / alert states
+ * KRUNCH design tokens.
+ *   • ink        — near-black graphite background
+ *   • champ      — signature KRUNCH red-orange "flame" accent (token name kept from a prior
+ *                  rebrand — see src/styles/index.css for why renaming it wasn't worth the risk)
+ *   • danger     — rose-red, deliberately pushed away from the champ hue so alerts never read
+ *                  as "just another shade of the brand color"
  *
  * Every token below resolves through a CSS custom property (see src/styles/index.css) instead
  * of a fixed hex value, so the same `bg-ink-card`/`text-white`/`text-champ`/... classes already
@@ -59,7 +60,7 @@ export default {
         // shadow but still tuned to the same neutral tone, instead of mixing in Tailwind's
         // default `shadow-lg` (a visibly different, untinted shadow) on hover.
         "card-hover": "0 2px 4px rgba(0,0,0,0.1), 0 18px 38px -8px rgba(0,0,0,0.28)",
-        glow: "0 8px 32px -6px rgba(224,166,58,0.35)",
+        glow: "0 8px 32px -6px rgba(255,90,54,0.35)",
       },
       keyframes: {
         "fade-in": {

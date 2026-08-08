@@ -1,8 +1,8 @@
-import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
+﻿import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
-import { ChampMark } from "@/shared/ui/ChampMark";
+import { BrandMark } from "@/shared/ui/BrandMark";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { PosCart } from "@/widgets/pos-cart/PosCart";
 import { PosMenu } from "@/widgets/pos-menu/PosMenu";
@@ -14,7 +14,7 @@ export default function SellerPosPage() {
     <div className="flex h-screen flex-col overflow-hidden [padding-left:env(safe-area-inset-left)] [padding-right:env(safe-area-inset-right)]">
       <header className="flex flex-wrap shrink-0 items-center justify-between gap-y-2 border-b border-ink-line bg-ink px-4 py-3 sm:px-6 [padding-top:max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-3">
-          <ChampMark size={28} />
+          <BrandMark size={28} />
           <h1 className="text-lg font-bold tracking-tight sm:text-xl">POS</h1>
         </div>
         <div className="flex items-center gap-3">

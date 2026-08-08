@@ -2,10 +2,13 @@ import { create } from "zustand";
 
 export type Theme = "dark" | "light";
 
-const STORAGE_KEY = "champ-theme";
+// Brand-neutral on purpose (not tied to any one client's name) so a future rebrand — like this
+// one, moving off the old "champ-theme" key — never needs to touch this again.
+const STORAGE_KEY = "pos-theme";
+const LEGACY_STORAGE_KEY = "champ-theme";
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
   if (stored === "dark" || stored === "light") return stored;
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }

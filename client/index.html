@@ -9,7 +9,7 @@
     <!-- Installed-app behavior on iOS: opens full-screen, no Safari address bar / toolbar. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="CHAMP POS" />
+    <meta name="apple-mobile-web-app-title" content="KRUNCH POS" />
     <meta name="mobile-web-app-capable" content="yes" />
     <!-- iOS splash screens (no native support for a single dynamic splash — one per exact device size). -->
     <link rel="apple-touch-startup-image" href="/splash/apple-splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
@@ -30,7 +30,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <title>CHAMP Burger — POS</title>
+    <title>KRUNCH — POS</title>
     <!--
       Applied synchronously, before React mounts — otherwise the page would flash the default
       dark theme for a frame even when the visitor has light saved, since React effects only
@@ -38,7 +38,7 @@
     -->
     <script>
       (function () {
-        var stored = localStorage.getItem("champ-theme");
+        var stored = localStorage.getItem("pos-theme") || localStorage.getItem("champ-theme");
         var theme = stored === "light" || stored === "dark" ? stored : (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
         document.documentElement.setAttribute("data-theme", theme);
       })();

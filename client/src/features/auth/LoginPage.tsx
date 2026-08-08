@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { getErrorMessage } from "@/shared/lib/errors";
 import { useAuthStore } from "@/shared/stores/authStore";
-import { ChampLogo } from "@/shared/ui/ChampLogo";
+import { BrandLogo } from "@/shared/ui/BrandLogo";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { loginRequest } from "./authApi";
@@ -57,7 +57,7 @@ export function LoginPage() {
       style={{
         backgroundImage:
           "radial-gradient(680px circle at 10% 8%, rgb(var(--color-champ) / 0.18), transparent 55%), " +
-          "radial-gradient(620px circle at 92% 88%, rgb(220 38 38 / 0.16), transparent 55%), " +
+          "radial-gradient(620px circle at 92% 88%, rgb(224 166 58 / 0.16), transparent 55%), " +
           "radial-gradient(1000px circle at 50% 110%, rgb(var(--color-champ) / 0.08), transparent 60%)",
       }}
     >
@@ -73,7 +73,7 @@ export function LoginPage() {
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-champ via-red-500 to-champ" />
 
         <div className="mb-8 flex justify-center">
-          <ChampLogo size="lg" subtitle="Burger POS" />
+          <BrandLogo size="lg" subtitle="Street Food POS" />
         </div>
 
         <div className="space-y-4">
@@ -133,7 +133,7 @@ export function LoginPage() {
           {mutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
         </button>
 
-        <p className="mt-6 text-center text-xs text-white/30">CHAMP Burger — POS + Inventory</p>
+        <p className="mt-6 text-center text-xs text-white/30">KRUNCH — POS + Inventory</p>
       </form>
     </div>
   );
