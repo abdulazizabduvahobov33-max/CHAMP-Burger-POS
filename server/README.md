@@ -1,4 +1,4 @@
-# CHAMP POS — Server (Module 1)
+# KRUNCH POS — Server (Module 1)
 
 Node.js + Express + TypeScript + Prisma + PostgreSQL.
 

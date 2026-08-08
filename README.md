@@ -1,6 +1,6 @@
-# CHAMP Burger — POS + Inventory
+# KRUNCH — POS + Inventory
 
-Monorepo for the CHAMP Burger fast-food management system (POS + склад).
+Monorepo for the KRUNCH fast-food management system (POS + склад).
 
 ## Structure
 
@@ -27,7 +27,7 @@ champ-pos/
 - JWT access token (15m, in-memory on the client) + rotating JWT refresh token (7d, httpOnly cookie, DB-backed so logout/rotation can revoke it)
 - `authenticate` (verifies access token) and `authorize(...roles)` (role gate) Express middleware — reusable by every future module's routes
 - Two roles: `SUPER_ADMIN`, `SELLER`
-- Client: Login page (CHAMP black/yellow), role-based redirect after login (`/admin` vs `/pos`), protected routes, silent session restore on page reload, global 401 → refresh → retry handling
+- Client: Login page (KRUNCH graphite/red-orange), role-based redirect after login (`/admin` vs `/pos`), protected routes, silent session restore on page reload, global 401 → refresh → retry handling
 - Brute-force guard on `/api/auth/login` (10 attempts / 15 min)
 
 ## Module 3 — Warehouse: Ingredients & Stock (DONE)
@@ -38,7 +38,7 @@ champ-pos/
 - Manual restock and manual write-off, each recorded as an auditable `StockMovement`
 - Movement history per ingredient, paginated
 - Search, unit filter, low-stock filter, pagination on the ingredients table
-- CHAMP-styled, fully responsive UI (table on desktop, cards on mobile) under Admin Dashboard → Склад
+- Consistently styled, fully responsive UI (table on desktop, cards on mobile) under Admin Dashboard → Склад
 - All endpoints under `/api/ingredients` require `SUPER_ADMIN` (reuses Module 2's `authenticate`/`authorize` middleware unchanged)
 
 ## Module 4 — Products (DONE)
@@ -47,7 +47,7 @@ champ-pos/
 - Photo upload (JPEG/PNG/WEBP, ≤5 MB) served publicly from `/uploads`, writes admin-only via `/api/uploads`
 - Search, category/sale-type/status filters, pagination on the products grid
 - Category management dialog (create/rename/delete, delete blocked while in use)
-- CHAMP-styled, fully responsive UI under Admin Dashboard → Товары
+- Consistently styled, fully responsive UI under Admin Dashboard → Товары
 - All endpoints require `SUPER_ADMIN` (reuses Module 2's `authenticate`/`authorize` middleware unchanged); warehouse module untouched
 
 ## Module 5 — Recipes (DONE)

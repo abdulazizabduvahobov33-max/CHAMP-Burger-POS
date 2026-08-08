@@ -3,10 +3,12 @@ import { env } from "./config/env.js";
 import { prisma } from "./config/db.js";
 import { ensureAdminExists, ensureSellerExists } from "./bootstrap/ensureUsers.js";
 import { ensureMenuSeeded } from "./bootstrap/ensureMenuSeeded.js";
+import { purgeLegacyMenu } from "./bootstrap/purgeLegacyMenu.js";
 
 async function bootstrap() {
   await ensureAdminExists();
   await ensureSellerExists();
+  await purgeLegacyMenu();
   await ensureMenuSeeded();
 
   const app = createApp();

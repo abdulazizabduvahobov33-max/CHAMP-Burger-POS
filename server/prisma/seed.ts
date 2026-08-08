@@ -30,7 +30,7 @@ const prisma = new PrismaClient();
 // (Render's free plan) still get the full menu without this script ever running there.
 
 async function main() {
-  console.log("🌱 Seeding CHAMP Burger database...\n");
+  console.log("🌱 Seeding KRUNCH database...\n");
 
   // ── 1. Main location ────────────────────────────────────────
   const location = await prisma.location.upsert({
@@ -39,7 +39,6 @@ async function main() {
     create: {
       id: "main-location",
       name: "Главный филиал",
-      phone: "94 939 89 68",
       isActive: true,
     },
   });
@@ -87,9 +86,9 @@ async function main() {
 
   // ── 3. Default settings ─────────────────────────────────────
   const settings: { key: string; value: string }[] = [
-    { key: "cafe_name", value: "CHAMP Burger" },
+    { key: "cafe_name", value: "KRUNCH" },
     { key: "currency", value: "сум" },
-    { key: "contact_phone", value: "94 939 89 68" },
+    { key: "contact_phone", value: "" },
     { key: "logo_url", value: "" },
     { key: "low_stock_default_threshold", value: "10" },
     { key: "language", value: "ru" },

@@ -1,20 +1,26 @@
 import { SaleType } from "@prisma/client";
 
 /**
- * The CHAMP Burger menu, categories, and product photos — single source of truth shared by
+ * The KRUNCH menu, categories, and product photos — single source of truth shared by
  * `prisma/seed.ts` (manual/local/Docker seeding) and `bootstrap/ensureMenuSeeded.ts` (automatic
  * first-run seeding, for hosts with no shell access to run the seed script by hand).
  *
  * `imageFile` names a file already committed under `server/src/uploads/` (see that folder) —
  * these are the actual menu photos, not placeholders, and are versioned in git specifically so
  * they survive a host with an ephemeral filesystem (a fresh deploy has no persisted uploads).
+ * None of the KRUNCH items have one yet (real photos are a follow-up) — ProductImage already
+ * shows a clean branded placeholder for any product with no imageFile, so this is a safe,
+ * presentable interim state, not a bug.
  */
 
 export const CATEGORY = {
-  BURGERS: "Бургеры",
-  HOTDOGS: "Хот-доги и лаваш",
-  OTHER: "Прочее",
+  CHICKEN: "Курица",
+  HOTDOGS: "Хот-доги",
+  SHAURMA: "Шаурма",
+  LAVASH: "Лаваш",
+  SAMSA: "Самса",
   DRINKS: "Напитки",
+  DESSERTS: "Десерты",
 } as const;
 
 export type MenuItem = {
@@ -25,164 +31,132 @@ export type MenuItem = {
   variants: { label: string; price: number }[];
 };
 
+// A classic soda's bottle/can size lineup — Cola, Fanta, and Pepsi are priced identically, so
+// the variant list is shared instead of repeated three times.
+const SODA_VARIANTS = [
+  { label: "Бутылка", price: 5000 },
+  { label: "0.5 л", price: 8000 },
+  { label: "1 л", price: 12000 },
+  { label: "1.5 л", price: 15000 },
+];
+
 export const MENU: MenuItem[] = [
-  // Бургеры
+  // Курица
   {
-    name: "Гамбургер",
-    category: CATEGORY.BURGERS,
-    imageFile: "49fb5e62-32fe-4351-9ee7-654ca84836cf.jpg",
-    variants: [
-      { label: "25 000", price: 25000 },
-      { label: "35 000", price: 35000 },
-    ],
+    name: "KFS",
+    category: CATEGORY.CHICKEN,
+    saleType: SaleType.WEIGHT,
+    variants: [{ label: "1 кг", price: 85000 }],
   },
+
+  // Хот-доги
   {
-    name: "Чизбургер",
-    category: CATEGORY.BURGERS,
-    imageFile: "f4c32840-b72e-4a77-8c6f-83d640001ead.jpg",
+    name: "Хот-дог",
+    category: CATEGORY.HOTDOGS,
     variants: [
-      { label: "28 000", price: 28000 },
-      { label: "38 000", price: 38000 },
-    ],
-  },
-  {
-    name: "Chicken Burger",
-    category: CATEGORY.BURGERS,
-    imageFile: "43aec59d-28ce-470b-8274-c8f480463937.jpg",
-    variants: [
+      { label: "15 000", price: 15000 },
+      { label: "18 000", price: 18000 },
       { label: "20 000", price: 20000 },
-      { label: "28 000", price: 28000 },
-    ],
-  },
-  {
-    name: "Chicken Cheese",
-    category: CATEGORY.BURGERS,
-    imageFile: "e03d2117-c4cd-4a01-ba54-2582b3f14a82.jpg",
-    variants: [
-      { label: "23 000", price: 23000 },
-      { label: "30 000", price: 30000 },
     ],
   },
 
-  // Хот-доги и лаваш
+  // Шаурма
   {
-    name: "Kanada",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "b1f1cf35-3bb2-4794-9396-ca582373dba9.jpg",
+    name: "Шаурма",
+    category: CATEGORY.SHAURMA,
     variants: [
-      { label: "15 000", price: 15000 },
       { label: "20 000", price: 20000 },
-    ],
-  },
-  {
-    name: "Salat",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "23ae05fe-5dc7-4f48-b256-53ea3c783c6a.jpg",
-    variants: [
-      { label: "15 000", price: 15000 },
-      { label: "20 000", price: 20000 },
-      { label: "25 000", price: 25000 },
-    ],
-  },
-  {
-    name: "BBQ (Hot-dog)",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "afd14271-d00e-48c9-b317-89e2f4fa8ef2.jpg",
-    variants: [
-      { label: "25 000", price: 25000 },
-      { label: "35 000", price: 35000 },
-    ],
-  },
-  {
-    name: "Mangal",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "c98e7dba-0b54-4454-96ee-a3784720c39b.jpg",
-    variants: [
-      { label: "25 000", price: 25000 },
-      { label: "35 000", price: 35000 },
-    ],
-  },
-  {
-    name: "Lavash",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "413a3f83-81cf-46f3-8da4-22c25f41bcc7.jpg",
-    variants: [
-      { label: "35 000", price: 35000 },
-      { label: "38 000", price: 38000 },
-    ],
-  },
-  {
-    name: "Qazili Hot-dog",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "268ffacb-27b2-42ef-bfae-3e6ef10d07b0.jpg",
-    variants: [
       { label: "25 000", price: 25000 },
       { label: "30 000", price: 30000 },
       { label: "35 000", price: 35000 },
     ],
-  },
-  {
-    name: "American Hot-dog",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "2d208002-54cf-4395-9287-70cd1bfc4004.jpg",
-    variants: [
-      { label: "20 000", price: 20000 },
-      { label: "25 000", price: 25000 },
-    ],
-  },
-  {
-    name: "Koralevskiy Hot-dog",
-    category: CATEGORY.HOTDOGS,
-    imageFile: "9c0210f8-544c-4f6d-9169-82c51c452b81.jpg",
-    variants: [{ label: "25 000", price: 25000 }],
   },
 
-  // Прочее
+  // Лаваш
   {
-    name: "Hagi",
-    category: CATEGORY.OTHER,
-    imageFile: "96d52632-5537-45e1-9881-6966f08c8617.jpg",
-    variants: [{ label: "35 000", price: 35000 }],
-  },
-  {
-    name: "Doner",
-    category: CATEGORY.OTHER,
-    imageFile: "04341b53-7e1f-4dd6-964b-fc0904076c19.jpg",
+    name: "Лаваш",
+    category: CATEGORY.LAVASH,
     variants: [
       { label: "30 000", price: 30000 },
+      { label: "35 000", price: 35000 },
       { label: "40 000", price: 40000 },
     ],
   },
+
+  // Самса — each filling is its own product (same pattern as separate burger products in the
+  // previous menu), since they're distinct items with a single price each, not size variants.
   {
-    name: "Kartoshka po derevenski",
-    category: CATEGORY.OTHER,
-    imageFile: "82a65dd7-3cc6-4869-8f40-c8378e20089d.jpg",
-    variants: [{ label: "18 000", price: 18000 }],
-  },
-  {
-    name: "Kefsi",
-    category: CATEGORY.OTHER,
-    saleType: SaleType.WEIGHT,
-    imageFile: "b3c8a75d-9d07-45fe-9909-c0fd17b11fae.jpg",
-    variants: [{ label: "100 000 / кг", price: 100000 }],
-  },
-  {
-    name: "Fri",
-    category: CATEGORY.OTHER,
-    imageFile: "d835fa66-96d3-449e-816d-2928debe6fc3.jpg",
-    variants: [{ label: "15 000", price: 15000 }],
-  },
-  {
-    name: "Kofe",
-    category: CATEGORY.DRINKS,
-    imageFile: "5148d3be-1b38-4b1c-b4cb-0e6e01f0309b.jpg",
+    name: "Самса с говядиной",
+    category: CATEGORY.SAMSA,
     variants: [{ label: "10 000", price: 10000 }],
   },
   {
-    name: "Limon choy",
+    name: "Самса с бараниной",
+    category: CATEGORY.SAMSA,
+    variants: [{ label: "12 000", price: 12000 }],
+  },
+  {
+    name: "Самса с картошкой",
+    category: CATEGORY.SAMSA,
+    variants: [{ label: "5 000", price: 5000 }],
+  },
+
+  // Напитки
+  { name: "Cola", category: CATEGORY.DRINKS, variants: SODA_VARIANTS },
+  { name: "Fanta", category: CATEGORY.DRINKS, variants: SODA_VARIANTS },
+  { name: "Pepsi", category: CATEGORY.DRINKS, variants: SODA_VARIANTS },
+  {
+    name: "Вода без газа",
     category: CATEGORY.DRINKS,
-    imageFile: "ee1f4ca4-9efb-4108-a846-27b45fd46c23.jpg",
-    variants: [{ label: "8 000", price: 8000 }],
+    variants: [
+      { label: "0.5 л", price: 3000 },
+      { label: "1 л", price: 5000 },
+    ],
+  },
+  {
+    name: "Газированная вода",
+    category: CATEGORY.DRINKS,
+    variants: [{ label: "1 л", price: 5000 }],
+  },
+  {
+    name: "Chortoq",
+    category: CATEGORY.DRINKS,
+    variants: [{ label: "15 000", price: 15000 }],
+  },
+  {
+    name: "Мохито",
+    category: CATEGORY.DRINKS,
+    variants: [{ label: "15 000", price: 15000 }],
+  },
+  {
+    name: "Коктейль",
+    category: CATEGORY.DRINKS,
+    variants: [{ label: "10 000", price: 10000 }],
+  },
+  {
+    name: "Фруктовый коктейль",
+    category: CATEGORY.DRINKS,
+    variants: [{ label: "15 000", price: 15000 }],
+  },
+
+  // Десерты — scoop sizes are unit-priced; the by-weight bulk price is its own WEIGHT-typed
+  // product (same split as Kefsi/KFS above), since saleType lives on the product, not the
+  // variant, and mixing a per-scoop price list with a per-kg price under one saleType would be
+  // ambiguous at checkout (is the seller entering a scoop count or a weight in kg?).
+  {
+    name: "Мороженое",
+    category: CATEGORY.DESSERTS,
+    variants: [
+      { label: "5 000", price: 5000 },
+      { label: "10 000", price: 10000 },
+      { label: "15 000", price: 15000 },
+    ],
+  },
+  {
+    name: "Мороженое на вес",
+    category: CATEGORY.DESSERTS,
+    saleType: SaleType.WEIGHT,
+    variants: [{ label: "1 кг", price: 60000 }],
   },
 ];
 
