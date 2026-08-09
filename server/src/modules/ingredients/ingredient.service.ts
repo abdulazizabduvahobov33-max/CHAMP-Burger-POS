@@ -17,6 +17,7 @@ function serializeIngredient(ingredient: {
   name: string;
   unit: string;
   minQuantity: Prisma.Decimal;
+  lastUnitCost: Prisma.Decimal;
   isActive: boolean;
   createdAt: Date;
   stock: { quantity: Prisma.Decimal }[];
@@ -28,6 +29,10 @@ function serializeIngredient(ingredient: {
     unit: ingredient.unit,
     minQuantity: ingredient.minQuantity.toString(),
     quantity: quantity.toString(),
+    // The most recent purchase price recorded for this ingredient (0 if it's never been
+    // bought through Purchases/Tovar kirimi yet) — lets the stock-intake page pre-fill a
+    // sensible starting price instead of a blank field every time.
+    lastUnitCost: ingredient.lastUnitCost.toString(),
     isLow: quantity.lessThan(ingredient.minQuantity),
     isActive: ingredient.isActive,
     createdAt: ingredient.createdAt,

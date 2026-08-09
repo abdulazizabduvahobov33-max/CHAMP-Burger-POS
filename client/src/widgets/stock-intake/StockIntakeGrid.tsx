@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Minus, Package, PackageX, Plus, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { useBulkRestockIngredients, useIngredients } from "@/entities/ingredient/api";
+import { useIngredients } from "@/entities/ingredient/api";
 import { formatQuantity } from "@/entities/ingredient/lib";
 import {
   getStockStatus,
@@ -13,6 +13,7 @@ import {
   type Ingredient,
   type Unit,
 } from "@/entities/ingredient/model";
+import { useCreatePurchase } from "@/entities/purchase/api";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { toast } from "@/shared/stores/toastStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -24,19 +25,38 @@ const QUICK_AMOUNTS = [1, 2, 5, 10, 20];
 // just asking for the full catalog in one request instead of adding a new "list all" route.
 const ALL_INGREDIENTS_PAGE_SIZE = 500;
 
+// A saved intake is really a purchase — one PurchaseItem per ingredient, quantity as a single
+// "pack" of 1 unit so packPrice IS the per-unit price entered here. Reusing Purchase/PurchaseItem
+// (rather than a new table) means this price immediately feeds the same avgUnitCost/lastUnitCost
+// weighted-average cost engine that report.costing.ts already uses for dish cost and profit, and
+// every intake shows up in the existing Purchases history for free.
+const UNITS_PER_PACK = 1;
+
+function effectivePrice(ingredient: Ingredient, draft: string | undefined): string {
+  if (draft !== undefined) return draft;
+  return Number(ingredient.lastUnitCost) > 0 ? ingredient.lastUnitCost : "";
+}
+
+function isValidPrice(value: string): boolean {
+  return value.trim() !== "" && Number(value) >= 0 && !Number.isNaN(Number(value));
+}
+
 export function StockIntakeGrid() {
   const { t } = useTranslation();
   const { data, isLoading, isError } = useIngredients({ page: 1, pageSize: ALL_INGREDIENTS_PAGE_SIZE });
-  const bulkRestock = useBulkRestockIngredients();
+  const createPurchase = useCreatePurchase();
 
   const [searchInput, setSearchInput] = useState("");
   const [unit, setUnit] = useState<Unit | "">("");
   const [lowOnly, setLowOnly] = useState(false);
   const [outOnly, setOutOnly] = useState(false);
-  // Draft quantities keyed by ingredient id — local to this page, not persisted anywhere until
-  // "Сохранить приход" is pressed (component state is enough here; nothing needs to survive a
-  // navigation away, unlike the POS cart which is why that one lives in a Zustand store).
+  // Draft quantities/prices keyed by ingredient id — local to this page, not persisted anywhere
+  // until "Сохранить приход" is pressed (component state is enough here; nothing needs to
+  // survive a navigation away, unlike the POS cart which is why that one lives in a Zustand
+  // store). Price starts undefined (not "") per row so it can fall back to lastUnitCost via
+  // effectivePrice() until the cashier actually types something.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [prices, setPrices] = useState<Record<string, string>>({});
 
   const allItems = data?.items ?? [];
 
@@ -63,16 +83,45 @@ export function StockIntakeGrid() {
     });
   }, [allItems, searchInput, unit, lowOnly, outOnly]);
 
-  const pendingItems = useMemo(
-    () =>
-      Object.entries(drafts)
-        .map(([ingredientId, value]) => ({ ingredientId, quantity: Number(value) }))
-        .filter((item) => item.quantity > 0),
-    [drafts],
-  );
+  const ingredientById = useMemo(() => new Map(allItems.map((ing) => [ing.id, ing])), [allItems]);
+
+  // Only rows with BOTH a quantity and a resolvable price (typed, or falling back to
+  // lastUnitCost) are ready to save — quantity alone isn't enough now that every line records a
+  // real purchase price, not just a stock delta.
+  const pendingItems = useMemo(() => {
+    const result: { ingredientId: string; packQuantity: number; unitsPerPack: number; packPrice: number }[] = [];
+    for (const [ingredientId, qtyDraft] of Object.entries(drafts)) {
+      const quantity = Number(qtyDraft);
+      if (!(quantity > 0)) continue;
+      const ingredient = ingredientById.get(ingredientId);
+      if (!ingredient) continue;
+      const price = effectivePrice(ingredient, prices[ingredientId]);
+      if (!isValidPrice(price)) continue;
+      result.push({ ingredientId, packQuantity: quantity, unitsPerPack: UNITS_PER_PACK, packPrice: Number(price) });
+    }
+    return result;
+  }, [drafts, prices, ingredientById]);
+
+  // Rows the cashier started (entered a quantity) but hasn't given a resolvable price yet —
+  // surfaced as a hint per row rather than a blocking error, same "just don't include it in the
+  // batch yet" philosophy as a stray negative/empty quantity already uses.
+  const incompleteCount = useMemo(() => {
+    let count = 0;
+    for (const [ingredientId, qtyDraft] of Object.entries(drafts)) {
+      if (!(Number(qtyDraft) > 0)) continue;
+      const ingredient = ingredientById.get(ingredientId);
+      if (!ingredient) continue;
+      if (!isValidPrice(effectivePrice(ingredient, prices[ingredientId]))) count++;
+    }
+    return count;
+  }, [drafts, prices, ingredientById]);
 
   function setDraft(id: string, value: string) {
     setDrafts((prev) => ({ ...prev, [id]: value }));
+  }
+
+  function setPrice(id: string, value: string) {
+    setPrices((prev) => ({ ...prev, [id]: value }));
   }
 
   function addQuickAmount(id: string, amount: number) {
@@ -91,14 +140,15 @@ export function StockIntakeGrid() {
   }
 
   function handleSave() {
-    if (pendingItems.length === 0 || bulkRestock.isPending) return;
+    if (pendingItems.length === 0 || createPurchase.isPending) return;
     const count = pendingItems.length;
-    bulkRestock.mutate(
+    createPurchase.mutate(
       { items: pendingItems },
       {
         onSuccess: () => {
           toast.success(t("intake.saveSuccess", { count }));
           setDrafts({});
+          setPrices({});
         },
         onError: (err) => toast.error(getErrorMessage(err, t("intake.saveFailed"))),
       },
@@ -183,10 +233,13 @@ export function StockIntakeGrid() {
         </label>
 
         <div className="flex flex-1 items-center justify-end gap-2">
-          {pendingItems.length > 0 && (
+          {(pendingItems.length > 0 || incompleteCount > 0) && (
             <button
               type="button"
-              onClick={() => setDrafts({})}
+              onClick={() => {
+                setDrafts({});
+                setPrices({});
+              }}
               className="rounded-xl border border-ink-line px-3 py-2.5 text-xs font-medium text-white/60 transition hover:text-white"
             >
               {t("intake.clearAll")}
@@ -195,10 +248,10 @@ export function StockIntakeGrid() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={pendingItems.length === 0 || bulkRestock.isPending}
+            disabled={pendingItems.length === 0 || createPurchase.isPending}
             className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-champ px-4 py-2.5 text-sm font-bold text-onaccent transition hover:bg-champ-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {bulkRestock.isPending
+            {createPurchase.isPending
               ? t("intake.saving")
               : pendingItems.length > 0
                 ? t("intake.saveWithCount", { count: pendingItems.length })
@@ -206,6 +259,12 @@ export function StockIntakeGrid() {
           </button>
         </div>
       </div>
+
+      {incompleteCount > 0 && (
+        <p role="status" className="px-1 text-xs text-warn">
+          {t("intake.priceMissingHint", { count: incompleteCount })}
+        </p>
+      )}
 
       <div className="rounded-card bg-ink-card shadow-card">
         {isLoading && (
@@ -234,6 +293,8 @@ export function StockIntakeGrid() {
                 onDraftChange={(v) => setDraft(ingredient.id, v)}
                 onStep={(dir) => step(ingredient.id, dir)}
                 onQuickAmount={(amount) => addQuickAmount(ingredient.id, amount)}
+                price={effectivePrice(ingredient, prices[ingredient.id])}
+                onPriceChange={(v) => setPrice(ingredient.id, v)}
               />
             ))}
           </div>
@@ -269,17 +330,22 @@ function IntakeRow({
   onDraftChange,
   onStep,
   onQuickAmount,
+  price,
+  onPriceChange,
 }: {
   ingredient: Ingredient;
   draft: string;
   onDraftChange: (value: string) => void;
   onStep: (direction: 1 | -1) => void;
   onQuickAmount: (amount: number) => void;
+  price: string;
+  onPriceChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
   const status = getStockStatus(ingredient.quantity, ingredient.minQuantity);
   const isWholeUnit = ingredient.unit === "PIECE";
   const hasDraft = Number(draft) > 0;
+  const priceNeeded = hasDraft && !isValidPrice(price);
 
   return (
     <div className={`flex flex-wrap items-center gap-4 p-4 transition lg:flex-nowrap ${hasDraft ? "bg-champ/5" : ""}`}>
@@ -308,12 +374,27 @@ function IntakeRow({
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
           placeholder="0"
+          aria-label={t("intake.quantityLabel")}
           className="input w-20 text-center"
         />
         <StepButton label={t("intake.increase")} onClick={() => onStep(1)}>
           <Plus className="h-3.5 w-3.5" />
         </StepButton>
       </div>
+
+      <label className="flex shrink-0 flex-col gap-1">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">{t("intake.priceLabel")}</span>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={price}
+          onChange={(e) => onPriceChange(e.target.value)}
+          placeholder="0"
+          aria-label={t("intake.priceLabel")}
+          className={`input w-28 text-center ${priceNeeded ? "border-warn/60 focus:border-warn" : ""}`}
+        />
+      </label>
 
       <div className="flex shrink-0 flex-wrap gap-1.5">
         {QUICK_AMOUNTS.map((amount) => (

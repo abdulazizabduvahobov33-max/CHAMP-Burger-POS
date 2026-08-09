@@ -106,17 +106,24 @@ export async function createPurchase(locationId: string, userId: string, input: 
         },
       });
 
-      await tx.stock.upsert({
+      const stock = await tx.stock.upsert({
         where: { ingredientId_locationId: { ingredientId: item.ingredientId, locationId } },
         create: { ingredientId: item.ingredientId, locationId, quantity: totalUnits },
         update: { quantity: { increment: totalUnits } },
       });
+      // Same before/after bookkeeping as ingredient.service.ts's restock — the upsert's
+      // returned row already reflects the increment, so deriving `before` from it is exact
+      // regardless of which branch ran.
+      const afterQty = stock.quantity;
+      const beforeQty = afterQty.minus(totalUnits);
 
       await tx.stockMovement.create({
         data: {
           ingredientId: item.ingredientId,
           locationId,
           change: totalUnits,
+          quantityBefore: beforeQty,
+          quantityAfter: afterQty,
           reason: "PURCHASE",
           referenceId: purchase.id,
           createdById: userId,

@@ -20,6 +20,8 @@ export type Ingredient = {
   unit: Unit;
   minQuantity: string;
   quantity: string;
+  // Most recent purchase price recorded via Purchases/Tovar kirimi ("0" if never purchased yet).
+  lastUnitCost: string;
   isLow: boolean;
   isActive: boolean;
   createdAt: string;
