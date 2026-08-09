@@ -47,9 +47,16 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
 
       {sale && (
         <div>
-          <p className="mb-4 text-sm text-white/50">
-            {format(new Date(sale.createdAt), "d MMMM yyyy, HH:mm", { locale: dateFnsLocale() })}
-          </p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-white/50">
+              {format(new Date(sale.createdAt), "d MMMM yyyy, HH:mm", { locale: dateFnsLocale() })}
+            </p>
+            {sale.status === "PENDING" && (
+              <span className="shrink-0 rounded-full bg-warn/15 px-2.5 py-1 text-xs font-bold text-warn">
+                {t("sale.statusPending")}
+              </span>
+            )}
+          </div>
 
           <div className="space-y-2 rounded-xl border border-ink-line p-3">
             {sale.items.map((item) => (
@@ -84,14 +91,16 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-line py-3 text-sm font-bold text-white/70 transition hover:border-champ/50 hover:text-white"
-          >
-            <Printer className="h-4 w-4" />
-            {t("printing.print")}
-          </button>
+          {sale.status === "ACCEPTED" && (
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-ink-line py-3 text-sm font-bold text-white/70 transition hover:border-champ/50 hover:text-white"
+            >
+              <Printer className="h-4 w-4" />
+              {t("printing.print")}
+            </button>
+          )}
         </div>
       )}
     </Dialog>

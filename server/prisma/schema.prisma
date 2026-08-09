@@ -43,6 +43,14 @@ enum SaleType {
   DIRECT
 }
 
+// PENDING — a waiter/seller sent the order but stock hasn't been deducted and payment hasn't
+// been captured yet; ACCEPTED — an admin confirmed it (or it was rung up directly at the
+// register, which creates it already-accepted) — see sale.service.ts's createSale/acceptSale.
+enum SaleStatus {
+  PENDING
+  ACCEPTED
+}
+
 enum StockReason {
   PURCHASE // приход по закупке
   SALE // списание при продаже
@@ -275,20 +283,25 @@ model PurchaseItem {
 // ── Sales / POS ──────────────────────────────────────────────
 
 model Sale {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   sellerId     String
-  seller       User     @relation(fields: [sellerId], references: [id])
+  seller       User       @relation(fields: [sellerId], references: [id])
   locationId   String
-  location     Location @relation(fields: [locationId], references: [id])
-  totalAmount  Decimal  @default(0) @db.Decimal(14, 2)
+  location     Location   @relation(fields: [locationId], references: [id])
+  totalAmount  Decimal    @default(0) @db.Decimal(14, 2)
   // Cash tendered by the customer and change handed back — both nullable: only cash checkouts
   // (the only payment method the POS supports today) populate them; a future non-cash payment
   // method leaves both null rather than storing a meaningless 0. Captured for the receipt, which
   // conventionally shows "Получено" / "Сдача" lines (see the Sale.cashReceived/changeGiven read
   // path in report/receipt code once printing is wired up).
-  cashReceived Decimal? @db.Decimal(14, 2)
-  changeGiven  Decimal? @db.Decimal(14, 2)
-  createdAt    DateTime @default(now())
+  cashReceived Decimal?   @db.Decimal(14, 2)
+  changeGiven  Decimal?   @db.Decimal(14, 2)
+  // Existing rows default to ACCEPTED on migration — every sale created before this column
+  // existed is, by definition, an already-completed transaction (stock was always deducted
+  // immediately). Only NEW rows created by a seller's "Отправить заказ" start as PENDING.
+  status       SaleStatus @default(ACCEPTED)
+  acceptedAt   DateTime?
+  createdAt    DateTime   @default(now())
 
   items SaleItem[]
 
@@ -297,6 +310,8 @@ model Sale {
   // Reports (Module 7) always scope by location first, then filter/range on createdAt —
   // a composite index serves that access pattern directly instead of intersecting two scans.
   @@index([locationId, createdAt])
+  // The admin "pending orders" queue filters by locationId + status=PENDING, oldest first.
+  @@index([locationId, status])
   @@map("sales")
 }
 

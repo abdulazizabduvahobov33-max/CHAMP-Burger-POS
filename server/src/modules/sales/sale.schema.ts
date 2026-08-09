@@ -17,6 +17,14 @@ export const listMySalesQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const acceptSaleSchema = z.object({
+  // A PENDING sale never has payment captured at send-time (see sale.service.ts) — the admin
+  // provides it now, accepting. Stays optional at the schema level for the same future-proofing
+  // reason createSaleSchema's cashReceived is optional (a non-cash payment method won't need it).
+  cashReceived: z.coerce.number().nonnegative("Сумма не может быть отрицательной").optional(),
+});
+
 export type SaleItemInput = z.infer<typeof saleItemSchema>;
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
 export type ListMySalesQuery = z.infer<typeof listMySalesQuerySchema>;
+export type AcceptSaleInput = z.infer<typeof acceptSaleSchema>;

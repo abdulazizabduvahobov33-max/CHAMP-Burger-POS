@@ -16,7 +16,9 @@ function cartTotal(lines: CartLine[]): number {
   return lines.reduce((sum, l) => sum + Number(l.unitPrice) * l.quantity, 0);
 }
 
-export function PosCart() {
+type PosCartMode = "send" | "accept";
+
+export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
   const { t } = useTranslation();
   const lines = useCartStore((s) => s.lines);
   const clear = useCartStore((s) => s.clear);
@@ -67,7 +69,15 @@ export function PosCart() {
           setMobileExpanded(false);
           window.clearTimeout(receiptTimeoutRef.current);
           receiptTimeoutRef.current = window.setTimeout(() => setLastReceiptTotal(null), 4000);
-          toast.success(t("pos.saleCompleted", { total: formatPrice(sale.totalAmount) }));
+          if (sale.status === "PENDING") {
+            toast.success(t("pos.orderSentPending"));
+          } else {
+            toast.success(t("pos.saleCompleted", { total: formatPrice(sale.totalAmount) }));
+            // Register mode: the cashier has no time to hunt for a print button between
+            // customers — fire the receipt straight to the paired printer (or the preview
+            // fallback) the moment the sale is confirmed.
+            if (mode === "accept") void handlePrint(sale);
+          }
         },
         onError: (err) => setCheckoutError(getErrorMessage(err, t("pos.saleFailed"))),
       },
@@ -75,6 +85,7 @@ export function PosCart() {
   }
 
   const bodyProps = {
+    mode,
     checkoutError,
     lastReceiptTotal,
     lastSale,
@@ -141,6 +152,7 @@ export function PosCart() {
 }
 
 type CartBodyProps = {
+  mode: PosCartMode;
   checkoutError: string | null;
   lastReceiptTotal: string | null;
   lastSale: Sale | null;
@@ -149,7 +161,7 @@ type CartBodyProps = {
   onPrint: (sale: Sale) => void;
 };
 
-function CartBody({ checkoutError, lastReceiptTotal, lastSale, isPending, onCheckout, onPrint }: CartBodyProps) {
+function CartBody({ mode, checkoutError, lastReceiptTotal, lastSale, isPending, onCheckout, onPrint }: CartBodyProps) {
   const { t } = useTranslation();
   const lines = useCartStore((s) => s.lines);
   const incrementQuantity = useCartStore((s) => s.incrementQuantity);
@@ -166,7 +178,7 @@ function CartBody({ checkoutError, lastReceiptTotal, lastSale, isPending, onChec
           <div className="flex h-full flex-col items-center justify-center py-10 text-center">
             <ShoppingCart className="mb-3 h-8 w-8 text-white/15" />
             <p className="text-sm text-white/40">{t("pos.selectFromLeft")}</p>
-            {lastSale && (
+            {lastSale && lastSale.status === "ACCEPTED" && (
               <button
                 type="button"
                 onClick={() => onPrint(lastSale)}
@@ -201,8 +213,12 @@ function CartBody({ checkoutError, lastReceiptTotal, lastSale, isPending, onChec
 
         {lastReceiptTotal && !checkoutError && (
           <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">
-            <span>{t("pos.saleCompleted", { total: formatPrice(lastReceiptTotal) })}</span>
-            {lastSale && (
+            <span>
+              {lastSale?.status === "PENDING"
+                ? t("pos.orderSentPending")
+                : t("pos.saleCompleted", { total: formatPrice(lastReceiptTotal) })}
+            </span>
+            {lastSale && lastSale.status === "ACCEPTED" && (
               <button
                 type="button"
                 onClick={() => onPrint(lastSale)}
@@ -237,7 +253,13 @@ function CartBody({ checkoutError, lastReceiptTotal, lastSale, isPending, onChec
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-champ py-3 text-sm font-bold text-onaccent shadow-card transition hover:bg-champ-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ShoppingCart className="h-4 w-4" />
-            {isPending ? t("pos.checkoutPending") : t("pos.checkout")}
+            {mode === "accept"
+              ? isPending
+                ? t("pos.acceptingOrder")
+                : t("pos.acceptOrder")
+              : isPending
+                ? t("pos.sendingOrder")
+                : t("pos.sendOrder")}
           </button>
         </div>
       </div>

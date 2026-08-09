@@ -10,6 +10,7 @@ import { useAuthStore } from "@/shared/stores/authStore";
 // Route-level code splitting — each admin/POS page ships as its own chunk instead of one
 // monolithic bundle, since a given session only ever needs the pages for its one role.
 const AdminDashboardPage = lazy(() => import("@/pages/AdminDashboardPage"));
+const AdminPosPage = lazy(() => import("@/pages/AdminPosPage"));
 const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
 const ProfitPage = lazy(() => import("@/pages/ProfitPage"));
@@ -45,6 +46,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute roles={["SUPER_ADMIN"]}>
             <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/pos"
+        element={
+          <ProtectedRoute roles={["SUPER_ADMIN"]}>
+            <AdminPosPage />
           </ProtectedRoute>
         }
       />

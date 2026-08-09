@@ -17,6 +17,8 @@ function serializeSale(sale: SaleWithItems) {
     totalAmount: sale.totalAmount.toString(),
     cashReceived: sale.cashReceived?.toString() ?? null,
     changeGiven: sale.changeGiven?.toString() ?? null,
+    status: sale.status,
+    acceptedAt: sale.acceptedAt,
     createdAt: sale.createdAt,
     items: sale.items.map((item) => ({
       id: item.id,
@@ -55,6 +57,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
         totalAmount: true,
         cashReceived: true,
         changeGiven: true,
+        status: true,
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -72,6 +75,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
       totalAmount: s.totalAmount.toString(),
       cashReceived: s.cashReceived?.toString() ?? null,
       changeGiven: s.changeGiven?.toString() ?? null,
+      status: s.status,
       itemCount: s._count.items,
     })),
     page,
@@ -94,22 +98,30 @@ export async function getMySale(id: string, sellerId: string) {
 }
 
 /**
- * Creates a Sale + its SaleItems and deducts every item's recipe ingredients from stock —
- * all in ONE transaction. If any single item can't be fulfilled (product deactivated mid-order,
- * or any ingredient anywhere in the cart runs short), the whole sale is rolled back: no Sale,
- * no SaleItems, no partial stock deduction. Prices are always looked up server-side from the
- * variant's current price — the client only ever sends variantId + quantity, never a price.
+ * Creates a Sale + its SaleItems in ONE transaction. Prices are always looked up server-side
+ * from the variant's current price — the client only ever sends variantId + quantity, never a
+ * price. The variant lookup (existence, active state, price) happens INSIDE the transaction
+ * rather than as a pre-check — otherwise a concurrent price change or product deactivation
+ * landing in the gap between a pre-check and the transaction opening would silently go
+ * unnoticed, charging a stale price or selling a now-unavailable item.
  *
- * The variant lookup (existence, active state, price) happens INSIDE the transaction rather
- * than as a pre-check — otherwise a concurrent price change or product deactivation landing in
- * the gap between a pre-check and the transaction opening would silently go unnoticed, charging
- * a stale price or selling a now-unavailable item.
+ * `autoAccept` decides whether this is a register sale (SUPER_ADMIN, "Принять заказ" rings it up
+ * immediately) or a sent order (SELLER/waiter, "Отправить заказ" — a SUPER_ADMIN reviews and
+ * accepts it later via acceptSale). It comes from the caller's ROLE, decided in the controller —
+ * never a client-supplied flag, so a seller's own request can't mark itself pre-accepted.
+ * When true, this does everything acceptSale would do (deduct recipe ingredients, capture
+ * payment) in the same transaction instead of a second round trip — one atomic write for the
+ * common "ring it up right now" case. When false, stock is left untouched and payment fields
+ * stay null until acceptSale runs — a sale that's only ever sent, never accepted, must have
+ * zero effect on stock or reporting (see report.service.ts / report.costing.ts's `status:
+ * "ACCEPTED"` filters).
  */
 export async function createSale(
   locationId: string,
   sellerId: string,
   items: SaleItemInput[],
-  cashReceived?: number,
+  cashReceived: number | undefined,
+  autoAccept: boolean,
 ) {
   // Defensive: collapse accidental duplicate variantId entries in one request instead of
   // trusting the client to have already aggregated quantities per line.
@@ -142,7 +154,9 @@ export async function createSale(
       }
     }
 
-    const sale = await tx.sale.create({ data: { sellerId, locationId, totalAmount: 0 } });
+    const sale = await tx.sale.create({
+      data: { sellerId, locationId, totalAmount: 0, status: autoAccept ? "ACCEPTED" : "PENDING" },
+    });
 
     let totalAmount = new Prisma.Decimal(0);
     for (const [variantId, quantity] of merged) {
@@ -155,32 +169,119 @@ export async function createSale(
         data: { saleId: sale.id, variantId, quantity, unitPrice, subtotal },
       });
 
-      // Same recipe-deduction primitive Module 5 built and race-tested, now composed into
-      // this larger transaction instead of opening its own — see recipe.service.ts.
-      await deductRecipeIngredients(tx, variantId, locationId, quantity, sellerId, saleItem.id);
+      if (autoAccept) {
+        // Same recipe-deduction primitive Module 5 built and race-tested, now composed into
+        // this larger transaction instead of opening its own — see recipe.service.ts. A
+        // not-yet-accepted (PENDING) sale skips this entirely — nothing is deducted until
+        // someone actually accepts it.
+        await deductRecipeIngredients(tx, variantId, locationId, quantity, sellerId, saleItem.id);
+      }
     }
 
-    // Validated against the server-computed total (never the client's pre-checkout snapshot) —
-    // the same reasoning as looking up prices fresh inside the transaction above.
     let changeGiven: Prisma.Decimal | undefined;
-    if (cashReceived !== undefined) {
-      const received = new Prisma.Decimal(cashReceived);
-      if (received.lt(totalAmount)) {
-        throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+    if (autoAccept) {
+      // Validated against the server-computed total (never the client's pre-checkout snapshot) —
+      // the same reasoning as looking up prices fresh inside the transaction above.
+      if (cashReceived !== undefined) {
+        const received = new Prisma.Decimal(cashReceived);
+        if (received.lt(totalAmount)) {
+          throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+        }
+        changeGiven = received.sub(totalAmount);
       }
-      changeGiven = received.sub(totalAmount);
     }
 
     await tx.sale.update({
       where: { id: sale.id },
       data: {
         totalAmount,
-        cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
-        changeGiven,
+        ...(autoAccept
+          ? {
+              acceptedAt: new Date(),
+              cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
+              changeGiven,
+            }
+          : {}),
       },
     });
     return sale.id;
   });
 
   return getSale(saleId);
+}
+
+/**
+ * Admin-only: confirms a PENDING sale a seller sent in — deducts every item's recipe
+ * ingredients (nothing was touched at creation time), captures payment, and marks it ACCEPTED.
+ * Same all-or-nothing transaction shape as the autoAccept branch of createSale above; if any
+ * ingredient runs short between "sent" and "accepted", the whole accept is rolled back and the
+ * sale stays PENDING for the admin to retry or reject.
+ */
+export async function acceptSale(locationId: string, id: string, cashReceived?: number) {
+  await prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findFirst({ where: { id, locationId }, include: { items: true } });
+    if (!sale) {
+      throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
+    }
+    if (sale.status === "ACCEPTED") {
+      throw new AppError(409, "ALREADY_ACCEPTED", "Заказ уже принят");
+    }
+
+    for (const item of sale.items) {
+      await deductRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), sale.sellerId, item.id);
+    }
+
+    let changeGiven: Prisma.Decimal | undefined;
+    if (cashReceived !== undefined) {
+      const received = new Prisma.Decimal(cashReceived);
+      if (received.lt(sale.totalAmount)) {
+        throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+      }
+      changeGiven = received.sub(sale.totalAmount);
+    }
+
+    await tx.sale.update({
+      where: { id: sale.id },
+      data: {
+        status: "ACCEPTED",
+        acceptedAt: new Date(),
+        cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
+        changeGiven,
+      },
+    });
+  });
+
+  return getSale(id);
+}
+
+/**
+ * The admin "new orders" queue — every seller's PENDING sale at this location, oldest first
+ * (first come, first served, like a real order queue). Deliberately not paginated: this is a
+ * short-lived working list (an order that never gets accepted is an anomaly worth surfacing in
+ * full, not truncating), unlike listSales'/listMySales' historical, paginated views.
+ */
+export async function listPendingSales(locationId: string) {
+  const sales = await prisma.sale.findMany({
+    where: { locationId, status: "PENDING" },
+    include: {
+      seller: { select: { name: true } },
+      items: { include: { variant: { include: { product: true } } } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return sales.map((sale) => ({
+    id: sale.id,
+    receiptNumber: shortReceiptNumber(sale.id),
+    sellerName: sale.seller.name,
+    totalAmount: sale.totalAmount.toString(),
+    createdAt: sale.createdAt,
+    items: sale.items.map((item) => ({
+      id: item.id,
+      productName: item.variant.product.name,
+      variantLabel: item.variant.label,
+      quantity: item.quantity.toString(),
+      subtotal: item.subtotal.toString(),
+    })),
+  }));
 }

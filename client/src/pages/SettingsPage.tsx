@@ -12,6 +12,8 @@ import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { deleteImage, resolveUploadUrl, uploadImage } from "@/shared/lib/uploads";
+import { forgetPrinter, pairPrinter } from "@/shared/printing/drivers/webUsbXPrinterDriver";
+import { usePairedPrinterStore } from "@/shared/printing/webUsbPrinterStore";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { toast } from "@/shared/stores/toastStore";
@@ -287,6 +289,7 @@ export default function SettingsPage() {
           )}
         </section>
 
+        <PrinterSection />
         <SecuritySection expiry={data?.security} />
         <SystemInfoSection />
         <DangerZoneSection />
@@ -301,6 +304,73 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/40">{label}</span>
       {children}
     </label>
+  );
+}
+
+/** WebUSB pairing must run from a real click (see webUsbXPrinterDriver.ts's pairPrinter) — this
+ * is the one place in the app that click lives. Once paired, every "Печать чека" call site
+ * (checkout, "Принять заказ", history reprint) switches from the preview dialog to this printer
+ * automatically — see printerRegistry.ts's getActiveDriver(). */
+function PrinterSection() {
+  const { t } = useTranslation();
+  const device = usePairedPrinterStore((s) => s.device);
+  const [pairing, setPairing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const webUsbSupported = typeof navigator !== "undefined" && Boolean(navigator.usb);
+
+  async function handlePair() {
+    setPairing(true);
+    setError(null);
+    const result = await pairPrinter();
+    setPairing(false);
+    if (result.ok) {
+      toast.success(t("settings.printer.paired", { name: result.name }));
+    } else if (result.error !== "cancelled") {
+      setError(t("settings.printer.pairFailed"));
+    }
+  }
+
+  return (
+    <section className="rounded-card bg-ink-card p-6 shadow-card">
+      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-white/50">{t("settings.printer.title")}</h2>
+      <p className="mb-4 text-xs text-white/30">{t("settings.printer.description")}</p>
+
+      {!webUsbSupported && (
+        <p className="mb-4 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-warn">
+          {t("settings.printer.unsupported")}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-line bg-ink-soft p-4">
+        <div>
+          <p className="text-sm font-semibold text-white">{device ? device.name : t("settings.printer.notPaired")}</p>
+          <p className="mt-0.5 text-xs text-white/40">
+            {device ? t("settings.printer.pairedHint") : t("settings.printer.notPairedHint")}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          {device && (
+            <button
+              type="button"
+              onClick={() => forgetPrinter()}
+              className="rounded-xl border border-ink-line px-3 py-2 text-xs font-medium text-white/60 transition hover:text-white"
+            >
+              {t("settings.printer.forget")}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handlePair}
+            disabled={pairing || !webUsbSupported}
+            className="rounded-xl bg-champ px-4 py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pairing ? t("common.saving") : device ? t("settings.printer.reconnect") : t("settings.printer.connect")}
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="mt-3 text-xs text-danger-soft">{error}</p>}
+    </section>
   );
 }
 

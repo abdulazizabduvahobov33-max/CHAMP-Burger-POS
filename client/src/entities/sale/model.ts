@@ -18,12 +18,16 @@ export type SaleItemResult = {
   subtotal: string;
 };
 
+export type SaleStatus = "PENDING" | "ACCEPTED";
+
 export type Sale = {
   id: string;
   receiptNumber: string;
   totalAmount: string;
   cashReceived: string | null;
   changeGiven: string | null;
+  status: SaleStatus;
+  acceptedAt: string | null;
   createdAt: string;
   items: SaleItemResult[];
 };
@@ -35,6 +39,7 @@ export type MySaleListItem = {
   totalAmount: string;
   cashReceived: string | null;
   changeGiven: string | null;
+  status: SaleStatus;
   itemCount: number;
 };
 
@@ -43,4 +48,25 @@ export type MySalesList = {
   page: number;
   pageSize: number;
   total: number;
+};
+
+export type AcceptSaleInput = {
+  cashReceived?: number;
+};
+
+export type PendingSaleItem = {
+  id: string;
+  productName: string;
+  variantLabel: string;
+  quantity: string;
+  subtotal: string;
+};
+
+export type PendingSale = {
+  id: string;
+  receiptNumber: string;
+  sellerName: string;
+  totalAmount: string;
+  createdAt: string;
+  items: PendingSaleItem[];
 };

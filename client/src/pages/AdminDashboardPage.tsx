@@ -1,5 +1,5 @@
 ﻿import { Link } from "react-router-dom";
-import { AlertTriangle, BarChart3, Bot, PackagePlus, Receipt, Settings, ShoppingBasket, TrendingUp, Truck, Users, Warehouse, type LucideIcon } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, PackagePlus, Receipt, Settings, ShoppingBasket, ShoppingCart, TrendingUp, Truck, Users, Warehouse, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useDashboardSummary } from "@/entities/report/api";
@@ -78,6 +78,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <DashboardCard to="/admin/pos" icon={ShoppingCart} title={t("dashboard.sections.register.title")} subtitle={t("dashboard.sections.register.subtitle")} />
         <DashboardCard to="/admin/reports" icon={BarChart3} title={t("dashboard.sections.reports.title")} subtitle={t("dashboard.sections.reports.subtitle")} />
         <DashboardCard to="/admin/products" icon={ShoppingBasket} title={t("dashboard.sections.products.title")} subtitle={t("dashboard.sections.products.subtitle")} />
         <DashboardCard to="/admin/warehouse" icon={Warehouse} title={t("dashboard.sections.warehouse.title")} subtitle={t("dashboard.sections.warehouse.subtitle")} />

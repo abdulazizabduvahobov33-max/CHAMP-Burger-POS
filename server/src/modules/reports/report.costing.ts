@@ -72,12 +72,20 @@ export type ProfitStats = {
  */
 export async function computeProfitStats(locationId: string, start?: Date, end?: Date): Promise<ProfitStats> {
   const dateWhere = start && end ? { createdAt: { gte: start, lte: end } } : {};
+  // PENDING sales haven't deducted stock or captured payment yet (see sale.service.ts) — they
+  // must not count as revenue/cost until an admin actually accepts them, or "today's revenue"
+  // would include orders that might still be rejected or never paid.
+  const acceptedOnly = { status: "ACCEPTED" as const };
 
   const [revenueAgg, grouped] = await Promise.all([
-    prisma.sale.aggregate({ where: { locationId, ...dateWhere }, _sum: { totalAmount: true }, _count: { _all: true } }),
+    prisma.sale.aggregate({
+      where: { locationId, ...acceptedOnly, ...dateWhere },
+      _sum: { totalAmount: true },
+      _count: { _all: true },
+    }),
     prisma.saleItem.groupBy({
       by: ["variantId"],
-      where: { sale: { locationId, ...dateWhere } },
+      where: { sale: { locationId, ...acceptedOnly, ...dateWhere } },
       _sum: { quantity: true },
     }),
   ]);

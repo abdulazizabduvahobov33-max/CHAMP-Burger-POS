@@ -83,7 +83,14 @@ export default function SellerHistoryPage() {
                       </p>
                     </div>
                   </div>
-                  <span className="shrink-0 text-lg font-bold text-champ">{formatPrice(sale.totalAmount)}</span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-lg font-bold text-champ">{formatPrice(sale.totalAmount)}</span>
+                    {sale.status === "PENDING" && (
+                      <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[10px] font-bold text-warn">
+                        {t("sale.statusPending")}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>

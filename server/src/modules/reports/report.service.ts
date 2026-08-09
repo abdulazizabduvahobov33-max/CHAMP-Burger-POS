@@ -62,6 +62,10 @@ export async function listSales(locationId: string, query: SalesListQuery) {
 
   const where: Prisma.SaleWhereInput = {
     locationId,
+    // A sales report is a report of completed transactions — a still-PENDING order (sent but
+    // not yet accepted) shows up in the admin's pending-orders queue (sale.service.ts's
+    // listPendingSales), not here.
+    status: "ACCEPTED",
     createdAt: { gte: range.start, lte: range.end },
     ...(query.search ? { seller: { name: { contains: query.search, mode: "insensitive" } } } : {}),
   };
@@ -168,7 +172,7 @@ export async function getTopProducts(locationId: string, query: TopProductsQuery
 
   const grouped = await prisma.saleItem.groupBy({
     by: ["variantId"],
-    where: { sale: { locationId, createdAt: { gte: range.start, lte: range.end } } },
+    where: { sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
     _sum: { quantity: true, subtotal: true },
     orderBy: { _sum: { quantity: "desc" } },
     take: query.limit,
@@ -214,7 +218,7 @@ export async function getProductProfitability(locationId: string, query: Product
 
   const grouped = await prisma.saleItem.groupBy({
     by: ["variantId"],
-    where: { sale: { locationId, createdAt: { gte: range.start, lte: range.end } } },
+    where: { sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
     _sum: { quantity: true, subtotal: true },
   });
 
