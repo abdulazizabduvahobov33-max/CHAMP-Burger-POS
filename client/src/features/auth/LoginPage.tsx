@@ -133,7 +133,7 @@ export function LoginPage() {
           {mutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
         </button>
 
-        <p className="mt-6 text-center text-xs text-white/30">KRUNCH — POS + Inventory</p>
+        <p className="mt-6 text-center text-xs text-white/30">Sharof KFS — POS + Inventory</p>
       </form>
     </div>
   );

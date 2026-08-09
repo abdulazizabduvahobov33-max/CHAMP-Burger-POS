@@ -2,7 +2,7 @@
   "name": "champ-pos-module1",
   "version": "1.0.0",
   "private": true,
-  "description": "CHAMP Burger POS + Inventory — monorepo root. Orchestrates server/ and client/, each of which stays independently installable/runnable on its own (see their own package.json + README).",
+  "description": "Sharof KFS POS + Inventory — monorepo root. Orchestrates server/ and client/, each of which stays independently installable/runnable on its own (see their own package.json + README).",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,yellow \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "install:all": "npm install --prefix server && npm install --prefix client",

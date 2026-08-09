@@ -5,11 +5,13 @@ import { ensureAdminExists, ensureSellerExists } from "./bootstrap/ensureUsers.j
 import { ensureIngredientsSeeded } from "./bootstrap/ensureIngredientsSeeded.js";
 import { ensureMenuSeeded } from "./bootstrap/ensureMenuSeeded.js";
 import { purgeLegacyMenu } from "./bootstrap/purgeLegacyMenu.js";
+import { rebrandCafeName } from "./bootstrap/rebrandCafeName.js";
 
 async function bootstrap() {
   await ensureAdminExists();
   await ensureSellerExists();
   await purgeLegacyMenu();
+  await rebrandCafeName();
   await ensureMenuSeeded();
   await ensureIngredientsSeeded();
 
@@ -18,7 +20,7 @@ async function bootstrap() {
   const server = app.listen(env.port, () => {
     // eslint-disable-next-line no-console
     console.log(
-      `\n🚀 KRUNCH POS server ready\n` +
+      `\n🚀 Sharof KFS POS server ready\n` +
         `   http://localhost:${env.port}/api/health\n` +
         `   env: ${env.nodeEnv}\n`,
     );

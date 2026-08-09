@@ -434,14 +434,14 @@
   "pwa": {
     "updateAvailable": "Ilova yangilanishi mavjud",
     "updateNow": "Yangilash",
-    "installPrompt": "KRUNCH POS ilovasini o'rnating",
+    "installPrompt": "Sharof KFS POS ilovasini o'rnating",
     "install": "O'rnatish"
   },
   "ai": {
     "title": "AI Yordamchi",
     "subtitle": "Sotuvlar, foyda, ombor haqida so'rang — yoki xarajat haqida xabar bering",
     "localModeBadge": "Bepul rejim",
-    "assistantName": "KRUNCH AI",
+    "assistantName": "Sharof KFS AI",
     "you": "Siz",
     "inputPlaceholder": "Xabar yozing…",
     "inputAriaLabel": "AI yordamchi uchun xabar",

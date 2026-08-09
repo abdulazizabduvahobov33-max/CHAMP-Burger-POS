@@ -434,14 +434,14 @@
   "pwa": {
     "updateAvailable": "Доступно обновление приложения",
     "updateNow": "Обновить",
-    "installPrompt": "Установите KRUNCH POS как приложение",
+    "installPrompt": "Установите Sharof KFS POS как приложение",
     "install": "Установить"
   },
   "ai": {
     "title": "ИИ-Помощник",
     "subtitle": "Спросите о продажах, прибыли, складе — или сообщите о расходе",
     "localModeBadge": "Бесплатный режим",
-    "assistantName": "KRUNCH AI",
+    "assistantName": "Sharof KFS AI",
     "you": "Вы",
     "inputPlaceholder": "Напишите сообщение…",
     "inputAriaLabel": "Сообщение для ИИ-помощника",

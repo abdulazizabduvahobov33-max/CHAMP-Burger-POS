@@ -12,9 +12,9 @@ export default defineConfig({
       includeAssets: ["icons/favicon-32.png", "icons/apple-touch-icon.png"],
       manifest: {
         id: "/",
-        name: "KRUNCH — POS + Inventory",
-        short_name: "KRUNCH POS",
-        description: "POS и учёт склада для KRUNCH",
+        name: "Sharof KFS — POS + Inventory",
+        short_name: "Sharof KFS",
+        description: "POS и учёт склада для Sharof KFS",
         start_url: "/",
         scope: "/",
         display: "standalone",

@@ -1,13 +1,13 @@
 import { SaleType } from "@prisma/client";
 
 /**
- * The KRUNCH menu, categories, and product photos — single source of truth shared by
+ * The Sharof KFS menu, categories, and product photos — single source of truth shared by
  * `prisma/seed.ts` (manual/local/Docker seeding) and `bootstrap/ensureMenuSeeded.ts` (automatic
  * first-run seeding, for hosts with no shell access to run the seed script by hand).
  *
  * `imageFile` names a file already committed under `server/src/uploads/` (see that folder) —
  * versioned in git specifically so it survives a host with an ephemeral filesystem (a fresh
- * deploy has no persisted uploads). Every KRUNCH item currently points at a temporary,
+ * deploy has no persisted uploads). Every Sharof KFS item currently points at a temporary,
  * legally-licensed stock photo (no third-party brand/logo visible in any shot) chosen to match
  * the dish — the client will swap these for their own photography later via the admin panel's
  * per-product photo upload; nothing else needs to change when that happens.

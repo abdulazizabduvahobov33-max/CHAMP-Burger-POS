@@ -1,7 +1,7 @@
 import { Unit } from "@prisma/client";
 
 /**
- * The baseline ingredient set every KRUNCH location needs on day one — same role as `menu.ts`
+ * The baseline ingredient set every Sharof KFS location needs on day one — same role as `menu.ts`
  * for products: single source of truth shared by `prisma/seed.ts` (manual/local/Docker seeding)
  * and `bootstrap/ensureIngredientsSeeded.ts` (automatic first-run seeding, for hosts with no
  * shell access to run the seed script by hand).

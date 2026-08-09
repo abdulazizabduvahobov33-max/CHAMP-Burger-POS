@@ -9,7 +9,7 @@
 # Logs: journalctl -u champ-pos-backend -f
 
 [Unit]
-Description=CHAMP POS backend (Express API)
+Description=Sharof KFS POS backend (Express API)
 After=network.target postgresql.service
 Wants=postgresql.service
 

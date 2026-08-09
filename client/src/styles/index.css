@@ -11,9 +11,9 @@
    * a bright champ/success/danger surface must stay dark regardless of theme.
    */
   :root {
-    /* Dark theme — graphite surfaces (neutral, not tinted) with the KRUNCH red-orange "flame"
-     * accent (`--color-champ*` — token name kept as-is post-rebrand; see tailwind.config.ts for
-     * why renaming it wasn't worth the blast radius). Danger is pushed toward rose and warn
+    /* Dark theme — graphite surfaces (neutral, not tinted) with the red-orange "flame"
+     * accent (`--color-champ*` — token name predates this brand, kept as-is through rebrands;
+     * see tailwind.config.ts for why renaming it wasn't worth the blast radius). Danger is pushed toward rose and warn
      * toward amber specifically so neither reads as "the same color" as the brand accent —
      * all three sit within ~15° of each other on a pure orange-red hue wheel otherwise. */
     --color-bg: 28 28 30;

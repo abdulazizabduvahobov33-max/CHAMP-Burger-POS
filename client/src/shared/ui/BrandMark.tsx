@@ -5,8 +5,8 @@ type BrandMarkProps = {
   className?: string;
 };
 
-/** The KRUNCH brand glyph — a layered flame mark (outer red-orange body, brighter inner core),
- * matching the generated favicon/PWA icons (see client/public/icons, client/public/splash)
+/** The Sharof KFS brand glyph — a layered flame mark (outer red-orange body, brighter inner
+ * core), matching the generated favicon/PWA icons (see client/public/icons, client/public/splash)
  * pixel-for-pixel. Gradient ids are namespaced per instance so multiple marks on one page
  * (header + POS + AI chat avatar) don't clash. */
 export function BrandMark({ size = 32, className = "" }: BrandMarkProps) {
@@ -20,7 +20,7 @@ export function BrandMark({ size = 32, className = "" }: BrandMarkProps) {
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}
       role="img"
-      aria-label="KRUNCH"
+      aria-label="Sharof KFS"
     >
       <defs>
         <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="1" y2="1">

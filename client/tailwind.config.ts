@@ -1,10 +1,11 @@
 import type { Config } from "tailwindcss";
 
 /**
- * KRUNCH design tokens.
+ * Sharof KFS design tokens.
  *   • ink        — near-black graphite background
- *   • champ      — signature KRUNCH red-orange "flame" accent (token name kept from a prior
- *                  rebrand — see src/styles/index.css for why renaming it wasn't worth the risk)
+ *   • champ      — signature red-orange "flame" accent (token name predates this brand — kept
+ *                  through two rebrands now; see src/styles/index.css for why renaming it wasn't
+ *                  worth the risk)
  *   • danger     — rose-red, deliberately pushed away from the champ hue so alerts never read
  *                  as "just another shade of the brand color"
  *

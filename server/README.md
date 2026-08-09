@@ -1,4 +1,4 @@
-# KRUNCH POS — Server (Module 1)
+# Sharof KFS POS — Server (Module 1)
 
 Node.js + Express + TypeScript + Prisma + PostgreSQL.
 

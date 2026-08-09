@@ -1,6 +1,6 @@
-# KRUNCH — POS + Inventory
+# Sharof KFS — POS + Inventory
 
-Monorepo for the KRUNCH fast-food management system (POS + склад).
+Monorepo for the Sharof KFS fast-food management system (POS + склад).
 
 ## Structure
 
@@ -27,7 +27,7 @@ champ-pos/
 - JWT access token (15m, in-memory on the client) + rotating JWT refresh token (7d, httpOnly cookie, DB-backed so logout/rotation can revoke it)
 - `authenticate` (verifies access token) and `authorize(...roles)` (role gate) Express middleware — reusable by every future module's routes
 - Two roles: `SUPER_ADMIN`, `SELLER`
-- Client: Login page (KRUNCH graphite/red-orange), role-based redirect after login (`/admin` vs `/pos`), protected routes, silent session restore on page reload, global 401 → refresh → retry handling
+- Client: Login page (Sharof KFS graphite/red-orange), role-based redirect after login (`/admin` vs `/pos`), protected routes, silent session restore on page reload, global 401 → refresh → retry handling
 - Brute-force guard on `/api/auth/login` (10 attempts / 15 min)
 
 ## Module 3 — Warehouse: Ingredients & Stock (DONE)

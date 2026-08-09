@@ -67,7 +67,7 @@ export async function ensureMenuSeeded(): Promise<void> {
       } else {
         const patch: { imageUrl?: string; sortOrder?: number } = {};
         // Covers a product that was created by an earlier run of this function BEFORE menu.ts
-        // had photos assigned yet (exactly what happened when the KRUNCH menu first shipped
+        // had photos assigned yet (exactly what happened when the Sharof KFS menu first shipped
         // without them) — this function only ever creates new products, so without this catch-up
         // step an already-existing row would never pick up a photo added to menu.ts later.
         if (item.imageFile && !product.imageUrl) patch.imageUrl = `${UPLOADS_URL_PREFIX}${item.imageFile}`;

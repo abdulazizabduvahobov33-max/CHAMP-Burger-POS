@@ -15,7 +15,7 @@ const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 if (import.meta.env.PROD && baseURL === "/api") {
   // eslint-disable-next-line no-console
   console.warn(
-    `[KRUNCH] VITE_API_URL was not set at build time — API requests will go to ${window.location.origin}/api ` +
+    `[Sharof KFS] VITE_API_URL was not set at build time — API requests will go to ${window.location.origin}/api ` +
       "(this page's own origin). If the backend runs on a different domain, set VITE_API_URL to its full URL " +
       "and rebuild the frontend.",
   );
