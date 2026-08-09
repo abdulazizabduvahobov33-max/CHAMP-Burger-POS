@@ -1,6 +1,7 @@
 import { AxiosError } from "axios";
 
 import i18n from "@/shared/i18n";
+import { translateServerMessage } from "./serverErrorTranslations";
 
 // Not a hook — called from plain mutation callbacks, not just component render bodies — so
 // this reads the shared i18n instance directly rather than via useTranslation(). It still
@@ -10,7 +11,10 @@ import i18n from "@/shared/i18n";
 export function getErrorMessage(error: unknown, fallback = i18n.t("common.genericError")): string {
   if (error instanceof AxiosError) {
     const message = (error.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
-    if (typeof message === "string") return message;
+    // The API has no i18n of its own — it always answers in Russian (see
+    // shared/lib/serverErrorTranslations.ts for why translating by exact text, not touching the
+    // server, is the safe fix here).
+    if (typeof message === "string") return translateServerMessage(message, i18n.language);
 
     // No structured `{ error: { message } }` body — the request reached *something*, just not
     // the API responding as expected (wrong URL, a proxy/host returning HTML or an empty body,
