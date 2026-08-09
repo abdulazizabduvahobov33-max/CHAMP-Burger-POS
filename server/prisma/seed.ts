@@ -106,23 +106,32 @@ async function main() {
   // ── 4. Categories (Module 4 normalized these into their own table).
   // `name` isn't a Prisma-level @unique field (case-insensitive uniqueness is enforced by a
   // functional index instead — see schema.prisma), so this is findFirst+create, not upsert.
+  // Rank in steps of 10, same reasoning as ensureMenuSeeded.ts — leaves room to manually
+  // re-insert an item between two existing ones later without renumbering the rest.
   const categoryNames = [...new Set(MENU.map((item) => item.category))];
   const categoryIdByName = new Map<string, string>();
-  for (const name of categoryNames) {
+  let backfilledCategoryOrder = 0;
+  for (const [index, name] of categoryNames.entries()) {
+    const sortOrder = (index + 1) * 10;
     let category = await prisma.category.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
     if (!category) {
-      category = await prisma.category.create({ data: { name } });
+      category = await prisma.category.create({ data: { name, sortOrder } });
+    } else if (category.sortOrder === null) {
+      category = await prisma.category.update({ where: { id: category.id }, data: { sortOrder } });
+      backfilledCategoryOrder++;
     }
     categoryIdByName.set(name, category.id);
   }
-  console.log(`✅ Categories: ${categoryNames.length}`);
+  console.log(`✅ Categories: ${categoryNames.length} (${backfilledCategoryOrder} order backfilled)`);
 
   // ── 5. Menu products + variants ─────────────────────────────
   let productCount = 0;
   let variantCount = 0;
   let backfilledPhotos = 0;
+  let backfilledProductOrder = 0;
 
-  for (const item of MENU) {
+  for (const [index, item] of MENU.entries()) {
+    const sortOrder = (index + 1) * 10;
     // find existing by name to keep seed idempotent
     let product = await prisma.product.findFirst({ where: { name: item.name } });
 
@@ -134,17 +143,23 @@ async function main() {
           saleType: item.saleType ?? SaleType.UNIT,
           imageUrl: item.imageFile ? `${UPLOADS_URL_PREFIX}${item.imageFile}` : null,
           isActive: true,
+          sortOrder,
         },
       });
       productCount++;
-    } else if (item.imageFile && !product.imageUrl) {
-      // Same catch-up as ensureMenuSeeded.ts — a product created before menu.ts had photos
-      // assigned yet otherwise never picks one up, since this loop only ever creates new rows.
-      product = await prisma.product.update({
-        where: { id: product.id },
-        data: { imageUrl: `${UPLOADS_URL_PREFIX}${item.imageFile}` },
-      });
-      backfilledPhotos++;
+    } else {
+      // Same catch-up as ensureMenuSeeded.ts — a product created before menu.ts had photos or
+      // sortOrder assigned yet otherwise never picks either up, since this loop only ever
+      // creates new rows.
+      const patch: { imageUrl?: string; sortOrder?: number } = {};
+      if (item.imageFile && !product.imageUrl) patch.imageUrl = `${UPLOADS_URL_PREFIX}${item.imageFile}`;
+      if (product.sortOrder === null) patch.sortOrder = sortOrder;
+
+      if (Object.keys(patch).length > 0) {
+        product = await prisma.product.update({ where: { id: product.id }, data: patch });
+        if (patch.imageUrl) backfilledPhotos++;
+        if (patch.sortOrder !== undefined) backfilledProductOrder++;
+      }
     }
 
     for (const v of item.variants) {
@@ -159,7 +174,10 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Products: ${productCount} new, Variants: ${variantCount} new, Photos backfilled: ${backfilledPhotos}`);
+  console.log(
+    `✅ Products: ${productCount} new, Variants: ${variantCount} new, Photos backfilled: ${backfilledPhotos}, ` +
+      `Order backfilled: ${backfilledProductOrder}`,
+  );
 
   // ── 6. Baseline ingredients ──────────────────────────────────
   // Same idempotent shape as products above (findFirst by case-insensitive name, then create) —

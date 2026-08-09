@@ -7,7 +7,9 @@ const DUPLICATE_NAME_MESSAGE = "Категория с таким названи�
 
 export async function listCategories() {
   const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
+    // Same menu-position ordering as product.service.ts's listProducts — the POS category
+    // pills should read Курица → Хот-доги → Шаурма → … , not alphabetically.
+    orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { name: "asc" }],
     include: { _count: { select: { products: true } } },
   });
   return categories.map((c) => ({ id: c.id, name: c.name, productCount: c._count.products, createdAt: c.createdAt }));

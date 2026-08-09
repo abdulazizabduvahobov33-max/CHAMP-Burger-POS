@@ -24,13 +24,22 @@ export async function ensureMenuSeeded(): Promise<void> {
       create: { id: DEFAULT_LOCATION_ID, name: DEFAULT_LOCATION_NAME, isActive: true },
     });
 
+    // Rank in steps of 10 (not 1) so a category/product can be manually re-inserted between two
+    // existing ones later without renumbering everything else.
     const categoryIdByName = new Map<string, string>();
     let newCategories = 0;
-    for (const name of Object.values(CATEGORY)) {
+    let backfilledCategoryOrder = 0;
+    for (const [index, name] of Object.values(CATEGORY).entries()) {
+      const sortOrder = (index + 1) * 10;
       let category = await prisma.category.findFirst({ where: { name: { equals: name, mode: "insensitive" } } });
       if (!category) {
-        category = await prisma.category.create({ data: { name } });
+        category = await prisma.category.create({ data: { name, sortOrder } });
         newCategories++;
+      } else if (category.sortOrder === null) {
+        // Same catch-up reasoning as the photo backfill below — a category created by an
+        // earlier run (before sortOrder existed) otherwise sorts after every ranked one forever.
+        category = await prisma.category.update({ where: { id: category.id }, data: { sortOrder } });
+        backfilledCategoryOrder++;
       }
       categoryIdByName.set(name, category.id);
     }
@@ -38,7 +47,9 @@ export async function ensureMenuSeeded(): Promise<void> {
     let newProducts = 0;
     let newVariants = 0;
     let backfilledPhotos = 0;
-    for (const item of MENU) {
+    let backfilledProductOrder = 0;
+    for (const [index, item] of MENU.entries()) {
+      const sortOrder = (index + 1) * 10;
       let product = await prisma.product.findFirst({ where: { name: item.name } });
 
       if (!product) {
@@ -49,19 +60,24 @@ export async function ensureMenuSeeded(): Promise<void> {
             saleType: item.saleType ?? SaleType.UNIT,
             imageUrl: item.imageFile ? `${UPLOADS_URL_PREFIX}${item.imageFile}` : null,
             isActive: true,
+            sortOrder,
           },
         });
         newProducts++;
-      } else if (item.imageFile && !product.imageUrl) {
+      } else {
+        const patch: { imageUrl?: string; sortOrder?: number } = {};
         // Covers a product that was created by an earlier run of this function BEFORE menu.ts
         // had photos assigned yet (exactly what happened when the KRUNCH menu first shipped
         // without them) — this function only ever creates new products, so without this catch-up
         // step an already-existing row would never pick up a photo added to menu.ts later.
-        product = await prisma.product.update({
-          where: { id: product.id },
-          data: { imageUrl: `${UPLOADS_URL_PREFIX}${item.imageFile}` },
-        });
-        backfilledPhotos++;
+        if (item.imageFile && !product.imageUrl) patch.imageUrl = `${UPLOADS_URL_PREFIX}${item.imageFile}`;
+        if (product.sortOrder === null) patch.sortOrder = sortOrder;
+
+        if (Object.keys(patch).length > 0) {
+          product = await prisma.product.update({ where: { id: product.id }, data: patch });
+          if (patch.imageUrl) backfilledPhotos++;
+          if (patch.sortOrder !== undefined) backfilledProductOrder++;
+        }
       }
 
       for (const v of item.variants) {
@@ -75,11 +91,12 @@ export async function ensureMenuSeeded(): Promise<void> {
       }
     }
 
-    if (newCategories > 0 || newProducts > 0 || backfilledPhotos > 0) {
+    if (newCategories > 0 || newProducts > 0 || backfilledPhotos > 0 || backfilledCategoryOrder > 0 || backfilledProductOrder > 0) {
       // eslint-disable-next-line no-console
       console.log(
         `✅ Bootstrap: seeded menu at "${location.name}" — ${newCategories} categories, ${newProducts} products, ` +
-          `${newVariants} variants, ${backfilledPhotos} photos backfilled.`,
+          `${newVariants} variants, ${backfilledPhotos} photos backfilled, ${backfilledCategoryOrder} category order + ` +
+          `${backfilledProductOrder} product order backfilled.`,
       );
     }
   } catch (err) {

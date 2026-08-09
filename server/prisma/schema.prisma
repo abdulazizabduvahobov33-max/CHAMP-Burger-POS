@@ -170,6 +170,10 @@ model Category {
   // (migration 20260707185104_category_name_ci_unique) — Prisma's DSL can't express
   // `UNIQUE (lower(name))`, so there's no @unique here even though one exists in the DB.
   name      String
+  // Menu-position rank (10, 20, 30…) so the POS category pills read in a deliberate order
+  // instead of alphabetically — null for anything created before this column existed or by an
+  // admin since, which sorts after every ranked category (Postgres puts NULLs last in ASC).
+  sortOrder Int?
   createdAt DateTime @default(now())
 
   products Product[]
@@ -184,6 +188,9 @@ model Product {
   category   Category @relation(fields: [categoryId], references: [id])
   imageUrl   String?
   saleType   SaleType @default(UNIT)
+  // Same menu-position ranking as Category.sortOrder, same null-sorts-last fallback for
+  // anything not explicitly ranked (a fresh admin-created product, for instance).
+  sortOrder  Int?
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
 

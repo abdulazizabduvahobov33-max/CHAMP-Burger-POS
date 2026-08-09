@@ -46,7 +46,10 @@ export async function listProducts(query: ListProductsQuery) {
     prisma.product.findMany({
       where,
       include,
-      orderBy: { name: "asc" },
+      // Menu-position order (nulls last, explicit rather than relying on Postgres's default) so
+      // the POS grid reads like an actual restaurant menu — category by category, dish by dish —
+      // instead of alphabetically; ties (e.g. two unranked new products) fall back to name.
+      orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { name: "asc" }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),
