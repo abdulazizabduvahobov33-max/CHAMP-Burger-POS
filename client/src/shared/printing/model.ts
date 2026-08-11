@@ -1,6 +1,6 @@
 /**
- * Printer-agnostic description of a receipt — the one thing every driver (today's preview,
- * tomorrow's WebUSB/local-agent ESC/POS driver) agrees on. Nothing that BUILDS a receipt
+ * Printer-agnostic description of a receipt — the one thing every driver (preview, WebUSB,
+ * WebBluetooth, tomorrow's local-agent driver) agrees on. Nothing that BUILDS a receipt
  * (checkout, reprint, order history) needs to know which physical printer is attached, and
  * nothing that PRINTS one needs to know how a Sale is shaped — this document is the seam
  * between the two. See docs/RECEIPT_PRINTING.md for the full architecture write-up.
@@ -23,8 +23,8 @@ export type ReceiptLine =
 
 export type ReceiptDocument = {
   /** Thermal paper width this was laid out for. Lives on the document (not hardcoded into a
-   * driver) so a future 80mm printer is a config value, not a code change — see
-   * buildReceiptDocument()'s `paperWidthMm` parameter. */
+   * driver) so an 80mm printer is a config value (see PrinterProfile.paperWidthMm), not a code
+   * change — see buildReceiptDocument()'s `paperWidthMm` parameter. */
   paperWidthMm: 58 | 80;
   lines: ReceiptLine[];
 };
@@ -32,13 +32,51 @@ export type ReceiptDocument = {
 export type PrintResult = { ok: true } | { ok: false; error: string };
 
 /**
- * What every printer integration implements. The XPrinter XP-58IIT (or any future model/brand)
- * is wired in by adding ONE new file that satisfies this interface and registering it in
- * printerRegistry.ts — nothing that calls print() changes.
+ * How a printer is physically reached. Adding a third (say, a local network print-agent a
+ * future client runs on their own machine) means: a new value here, a new driver file
+ * implementing ReceiptPrinterDriver, one line in printerRegistry.ts's DRIVERS map, and one entry
+ * in the wizard's transport-choice step — nothing else in the app changes.
+ */
+export type PrinterTransport = "webusb" | "webbluetooth" | "preview";
+
+/** What a printer is used for. Only "register" is actually wired to a print call site today
+ * (checkout / "Принять заказ" / reprint) — kitchen and bar exist now purely so a location can
+ * pair and label a second or third printer ahead of the feature that routes tickets to them,
+ * without a data-model change once that feature exists. */
+export type PrinterRole = "register" | "kitchen" | "bar";
+
+/** Identifies one physical printer this device has been paired with, persisted locally (see
+ * printerProfilesStore.ts — a printer is a property of the till it's plugged into, not the
+ * business). Exactly one of `usb`/`bluetooth` is set, matching `transport`. */
+export type PrinterProfile = {
+  id: string;
+  name: string;
+  role: PrinterRole;
+  transport: PrinterTransport;
+  paperWidthMm: 58 | 80;
+  usb?: { vendorId: number; productId: number };
+  bluetooth?: { deviceId: string };
+};
+
+export type PrinterIdentity = Pick<PrinterProfile, "usb" | "bluetooth">;
+
+export type PairResult = { ok: true; name: string; identity: PrinterIdentity } | { ok: false; error: string };
+
+/**
+ * What every printer integration implements. A brand-new transport (or a specific model that
+ * needs different handling) is wired in by adding ONE new file that satisfies this interface and
+ * registering it in printerRegistry.ts — nothing that calls print() changes, and the setup
+ * wizard (widgets/printer-wizard) drives any driver through the same three calls.
  */
 export interface ReceiptPrinterDriver {
-  readonly id: string;
-  /** Shown in any future "choose your printer" UI. */
+  readonly transport: PrinterTransport;
+  /** Shown in the wizard's connection-type step. */
   readonly label: string;
-  print(doc: ReceiptDocument): Promise<PrintResult>;
+  /** Whether this transport's browser API exists at all on this device — a wizard step hides
+   * (rather than shows disabled) an option that could never work here. */
+  isSupported(): boolean;
+  /** Must be called from a real user click/tap — every one of these browser APIs requires a user
+   * gesture for its device picker. Resolves once the user has chosen (or cancelled) a device. */
+  pair(): Promise<PairResult>;
+  print(doc: ReceiptDocument, profile: PrinterProfile): Promise<PrintResult>;
 }

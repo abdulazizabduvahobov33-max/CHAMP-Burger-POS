@@ -1,5 +1,5 @@
 /**
- * Minimal WebUSB ambient types — just the surface drivers/webUsbXPrinterDriver.ts actually uses.
+ * Minimal WebUSB ambient types — just the surface drivers/webUsbEscPosDriver.ts actually uses.
  * TypeScript's DOM lib doesn't ship WebUSB types, and pulling in a full @types package for four
  * interfaces isn't worth the dependency. Chrome/Edge (desktop and Android) implement this; other
  * browsers leave `navigator.usb` undefined, which every call site here already checks for.

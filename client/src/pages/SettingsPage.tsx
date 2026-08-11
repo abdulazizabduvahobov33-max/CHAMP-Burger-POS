@@ -12,8 +12,12 @@ import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { deleteImage, resolveUploadUrl, uploadImage } from "@/shared/lib/uploads";
-import { forgetPrinter, pairPrinter } from "@/shared/printing/drivers/webUsbXPrinterDriver";
-import { usePairedPrinterStore } from "@/shared/printing/webUsbPrinterStore";
+import type { PrinterProfile, PrinterRole, PrinterTransport } from "@/shared/printing/model";
+import { getPairableDrivers } from "@/shared/printing/printerRegistry";
+import { usePrinterProfilesStore } from "@/shared/printing/printerProfilesStore";
+import { PrinterSetupWizard } from "@/widgets/printer-wizard/PrinterSetupWizard";
+import { useNotificationSoundSettingsStore } from "@/shared/notifications/notificationSoundSettingsStore";
+import { playOrderChime } from "@/shared/notifications/sound";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { useAuthStore } from "@/shared/stores/authStore";
 import { toast } from "@/shared/stores/toastStore";
@@ -290,6 +294,7 @@ export default function SettingsPage() {
         </section>
 
         <PrinterSection />
+        <NotificationSoundSection />
         <SecuritySection expiry={data?.security} />
         <SystemInfoSection />
         <DangerZoneSection />
@@ -307,69 +312,158 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** WebUSB pairing must run from a real click (see webUsbXPrinterDriver.ts's pairPrinter) — this
- * is the one place in the app that click lives. Once paired, every "Печать чека" call site
- * (checkout, "Принять заказ", history reprint) switches from the preview dialog to this printer
- * automatically — see printerRegistry.ts's getActiveDriver(). */
+const ROLE_LABEL_KEY: Record<PrinterRole, string> = {
+  register: "settings.printer.wizard.roleRegister",
+  kitchen: "settings.printer.wizard.roleKitchen",
+  bar: "settings.printer.wizard.roleBar",
+};
+
+const TRANSPORT_LABEL_KEY: Record<PrinterTransport, string> = {
+  webusb: "settings.printer.transportUsb",
+  webbluetooth: "settings.printer.transportBluetooth",
+  preview: "settings.printer.transportUsb",
+};
+
+/** Lists every printer this device has been paired with (see printerProfilesStore.ts) — a
+ * cashier's register printer, and optionally a kitchen/bar one, though nothing routes tickets to
+ * those yet (see PrinterRole's comment in model.ts). "Подключить принтер" opens the step-by-step
+ * PrinterSetupWizard instead of pairing inline here. */
 function PrinterSection() {
   const { t } = useTranslation();
-  const device = usePairedPrinterStore((s) => s.device);
-  const [pairing, setPairing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const webUsbSupported = typeof navigator !== "undefined" && Boolean(navigator.usb);
-
-  async function handlePair() {
-    setPairing(true);
-    setError(null);
-    const result = await pairPrinter();
-    setPairing(false);
-    if (result.ok) {
-      toast.success(t("settings.printer.paired", { name: result.name }));
-    } else if (result.error !== "cancelled") {
-      setError(t("settings.printer.pairFailed"));
-    }
-  }
+  const profiles = usePrinterProfilesStore((s) => s.profiles);
+  const removeProfile = usePrinterProfilesStore((s) => s.removeProfile);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [removing, setRemoving] = useState<PrinterProfile | null>(null);
+  const anySupported = getPairableDrivers().some((d) => d.isSupported());
 
   return (
     <section className="rounded-card bg-ink-card p-6 shadow-card">
       <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-white/50">{t("settings.printer.title")}</h2>
       <p className="mb-4 text-xs text-white/30">{t("settings.printer.description")}</p>
 
-      {!webUsbSupported && (
+      {!anySupported && (
         <p className="mb-4 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-warn">
           {t("settings.printer.unsupported")}
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-line bg-ink-soft p-4">
-        <div>
-          <p className="text-sm font-semibold text-white">{device ? device.name : t("settings.printer.notPaired")}</p>
-          <p className="mt-0.5 text-xs text-white/40">
-            {device ? t("settings.printer.pairedHint") : t("settings.printer.notPairedHint")}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          {device && (
+      <div className="space-y-2">
+        {profiles.length === 0 && (
+          <p className="rounded-xl border border-ink-line bg-ink-soft p-4 text-sm text-white/40">{t("settings.printer.notPaired")}</p>
+        )}
+        {profiles.map((profile) => (
+          <div key={profile.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-line bg-ink-soft p-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-white">{profile.name}</p>
+                <span className="shrink-0 rounded-full bg-champ/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-champ">
+                  {t(ROLE_LABEL_KEY[profile.role])}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-white/40">
+                {t(TRANSPORT_LABEL_KEY[profile.transport])} · {profile.paperWidthMm} мм
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => forgetPrinter()}
-              className="rounded-xl border border-ink-line px-3 py-2 text-xs font-medium text-white/60 transition hover:text-white"
+              onClick={() => setRemoving(profile)}
+              className="shrink-0 rounded-xl border border-ink-line px-3 py-2 text-xs font-medium text-white/60 transition hover:border-danger/50 hover:text-danger-soft"
             >
               {t("settings.printer.forget")}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handlePair}
-            disabled={pairing || !webUsbSupported}
-            className="rounded-xl bg-champ px-4 py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {pairing ? t("common.saving") : device ? t("settings.printer.reconnect") : t("settings.printer.connect")}
-          </button>
-        </div>
+          </div>
+        ))}
       </div>
 
-      {error && <p className="mt-3 text-xs text-danger-soft">{error}</p>}
+      <button
+        type="button"
+        onClick={() => setWizardOpen(true)}
+        disabled={!anySupported}
+        className="mt-4 flex items-center gap-2 rounded-xl bg-champ px-4 py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {t("settings.printer.connect")}
+      </button>
+
+      <PrinterSetupWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+
+      <ConfirmDialog
+        open={removing !== null}
+        title={t("settings.printer.forgetTitle")}
+        description={t("settings.printer.forgetDescription", { name: removing?.name ?? "" })}
+        confirmLabel={t("settings.printer.forget")}
+        danger
+        onConfirm={() => {
+          if (removing) removeProfile(removing.id);
+          setRemoving(null);
+        }}
+        onClose={() => setRemoving(null)}
+      />
+    </section>
+  );
+}
+
+/** Mute + volume for the "new order" chime (shared/notifications/sound.ts) — deliberately per-
+ * device (plain localStorage, see notificationSoundSettingsStore.ts), same reasoning as the
+ * printer section below: a speaker is a property of this till, not the business. */
+function NotificationSoundSection() {
+  const { t } = useTranslation();
+  const muted = useNotificationSoundSettingsStore((s) => s.muted);
+  const volume = useNotificationSoundSettingsStore((s) => s.volume);
+  const setMuted = useNotificationSoundSettingsStore((s) => s.setMuted);
+  const setVolume = useNotificationSoundSettingsStore((s) => s.setVolume);
+  const volumePercent = Math.round(volume * 100);
+
+  return (
+    <section className="rounded-card bg-ink-card p-6 shadow-card">
+      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-white/50">{t("settings.notifications.title")}</h2>
+      <p className="mb-4 text-xs text-white/30">{t("settings.notifications.description")}</p>
+
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-ink-line bg-ink-soft p-4">
+        <div>
+          <p className="text-sm font-semibold text-white">{t("settings.notifications.soundLabel")}</p>
+          <p className="mt-0.5 text-xs text-white/40">{t("settings.notifications.soundHint")}</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!muted}
+          aria-label={t("settings.notifications.soundLabel")}
+          onClick={() => setMuted(!muted)}
+          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${muted ? "bg-ink-line" : "bg-champ"}`}
+        >
+          <span
+            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${muted ? "translate-x-1" : "translate-x-6"}`}
+          />
+        </button>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-ink-line bg-ink-soft p-4">
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="notif-volume" className="text-sm font-semibold text-white">
+            {t("settings.notifications.volumeLabel")}
+          </label>
+          <span className="shrink-0 text-xs font-medium text-white/40">{volumePercent}%</span>
+        </div>
+        <input
+          id="notif-volume"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={volumePercent}
+          disabled={muted}
+          onChange={(e) => setVolume(Number(e.target.value) / 100)}
+          className="mt-3 w-full accent-champ disabled:opacity-40"
+        />
+        <button
+          type="button"
+          onClick={() => playOrderChime()}
+          disabled={muted}
+          className="mt-4 rounded-xl border border-ink-line px-4 py-2 text-xs font-medium text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {t("settings.notifications.test")}
+        </button>
+      </div>
     </section>
   );
 }
