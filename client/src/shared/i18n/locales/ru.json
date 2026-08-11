@@ -311,7 +311,12 @@
     "pending": {
       "title": "Заказы от официантов",
       "emptyTitle": "Нет новых заказов",
-      "emptyDescription": "Заказы, отправленные официантами, появятся здесь"
+      "emptyDescription": "Заказы, отправленные официантами, появятся здесь",
+      "reject": "Отклонить",
+      "rejected": "Заказ отклонён",
+      "rejectTitle": "Отклонить заказ?",
+      "rejectDescription": "Заказ №{{number}} будет отклонён. Официант увидит, что заказ не принят.",
+      "rejectConfirm": "Отклонить заказ"
     },
     "decreaseQuantity": "Уменьшить количество",
     "increaseQuantity": "Увеличить количество",
@@ -336,6 +341,13 @@
     "emptyTitle": "Заказов пока нет",
     "emptyDescription": "Здесь появятся ваши чеки после первой продажи"
   },
+  "notifications": {
+    "newOrderTitle": "Новый заказ",
+    "toast": {
+      "orderAccepted": "Заказ №{{number}} принят",
+      "orderRejected": "Заказ №{{number}} отклонён"
+    }
+  },
   "printing": {
     "print": "Печать чека",
     "reprintLast": "Повторить чек",
@@ -359,6 +371,7 @@
     "detailTitleDefault": "Продажа",
     "statusPending": "Ожидает подтверждения",
     "statusAccepted": "Принят",
+    "statusRejected": "Отклонён",
     "totalCost": "Себестоимость",
     "totalProfit": "Прибыль чека",
     "total": "Итого",

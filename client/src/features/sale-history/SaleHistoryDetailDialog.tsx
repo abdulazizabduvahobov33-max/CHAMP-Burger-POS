@@ -56,6 +56,11 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
                 {t("sale.statusPending")}
               </span>
             )}
+            {sale.status === "REJECTED" && (
+              <span className="shrink-0 rounded-full bg-danger/15 px-2.5 py-1 text-xs font-bold text-danger-soft">
+                {t("sale.statusRejected")}
+              </span>
+            )}
           </div>
 
           <div className="space-y-2 rounded-xl border border-ink-line p-3">

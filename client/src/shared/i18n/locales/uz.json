@@ -311,7 +311,12 @@
     "pending": {
       "title": "Ofitsiantlardan buyurtmalar",
       "emptyTitle": "Yangi buyurtmalar yo'q",
-      "emptyDescription": "Ofitsiantlar yuborgan buyurtmalar shu yerda paydo bo'ladi"
+      "emptyDescription": "Ofitsiantlar yuborgan buyurtmalar shu yerda paydo bo'ladi",
+      "reject": "Rad etish",
+      "rejected": "Buyurtma rad etildi",
+      "rejectTitle": "Buyurtmani rad etasizmi?",
+      "rejectDescription": "№{{number}} buyurtma rad etiladi. Ofitsiant buyurtma qabul qilinmaganini ko'radi.",
+      "rejectConfirm": "Buyurtmani rad etish"
     },
     "decreaseQuantity": "Miqdorni kamaytirish",
     "increaseQuantity": "Miqdorni oshirish",
@@ -336,6 +341,13 @@
     "emptyTitle": "Hali buyurtmalar yo'q",
     "emptyDescription": "Birinchi sotuvdan keyin bu yerda cheklaringiz paydo bo'ladi"
   },
+  "notifications": {
+    "newOrderTitle": "Yangi buyurtma",
+    "toast": {
+      "orderAccepted": "№{{number}} buyurtma qabul qilindi",
+      "orderRejected": "№{{number}} buyurtma rad etildi"
+    }
+  },
   "printing": {
     "print": "Chekni chop etish",
     "reprintLast": "Chekni qayta chop etish",
@@ -359,6 +371,7 @@
     "detailTitleDefault": "Sotuv",
     "statusPending": "Tasdiqlanishi kutilmoqda",
     "statusAccepted": "Qabul qilingan",
+    "statusRejected": "Rad etilgan",
     "totalCost": "Tannarx",
     "totalProfit": "Chek foydasi",
     "total": "Jami",

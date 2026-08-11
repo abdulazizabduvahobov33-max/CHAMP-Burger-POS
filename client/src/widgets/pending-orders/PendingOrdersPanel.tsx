@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Check, Clock, Loader2, ShoppingBag } from "lucide-react";
+import { Check, Clock, Loader2, ShoppingBag, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { formatPrice } from "@/entities/product/lib";
-import { useAcceptSale, usePendingSales } from "@/entities/sale/api";
+import { useAcceptSale, usePendingSales, useRejectSale } from "@/entities/sale/api";
 import type { PendingSale } from "@/entities/sale/model";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { toast } from "@/shared/stores/toastStore";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { Dialog } from "@/shared/ui/Dialog";
 import { EmptyState } from "@/shared/ui/EmptyState";
 
@@ -26,9 +27,11 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
   const { t } = useTranslation();
   const { data: pending, isLoading } = usePendingSales();
   const acceptSale = useAcceptSale();
+  const rejectSale = useRejectSale();
   const { printReceipt } = usePrintReceipt();
   const [accepting, setAccepting] = useState<PendingSale | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<PendingSale | null>(null);
 
   function handleAcceptConfirm(cashReceived: number) {
     if (!accepting || acceptSale.isPending) return;
@@ -44,6 +47,17 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
         onError: (err) => setAcceptError(getErrorMessage(err, t("pos.saleFailed"))),
       },
     );
+  }
+
+  function handleRejectConfirm() {
+    if (!rejecting || rejectSale.isPending) return;
+    rejectSale.mutate(rejecting.id, {
+      onSuccess: () => {
+        setRejecting(null);
+        toast.info(t("pos.pending.rejected"));
+      },
+      onError: (err) => toast.error(getErrorMessage(err, t("pos.saleFailed"))),
+    });
   }
 
   return (
@@ -62,7 +76,12 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
         {!isLoading && pending && pending.length > 0 && (
           <div className="max-h-[65vh] space-y-2 overflow-y-auto">
             {pending.map((sale) => (
-              <PendingOrderRow key={sale.id} sale={sale} onAccept={() => setAccepting(sale)} />
+              <PendingOrderRow
+                key={sale.id}
+                sale={sale}
+                onAccept={() => setAccepting(sale)}
+                onReject={() => setRejecting(sale)}
+              />
             ))}
           </div>
         )}
@@ -76,11 +95,30 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
         error={acceptError}
         onConfirm={handleAcceptConfirm}
       />
+
+      <ConfirmDialog
+        open={rejecting !== null}
+        title={t("pos.pending.rejectTitle")}
+        description={t("pos.pending.rejectDescription", { number: rejecting?.receiptNumber ?? "" })}
+        confirmLabel={t("pos.pending.rejectConfirm")}
+        danger
+        pending={rejectSale.isPending}
+        onConfirm={handleRejectConfirm}
+        onClose={() => setRejecting(null)}
+      />
     </>
   );
 }
 
-function PendingOrderRow({ sale, onAccept }: { sale: PendingSale; onAccept: () => void }) {
+function PendingOrderRow({
+  sale,
+  onAccept,
+  onReject,
+}: {
+  sale: PendingSale;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="animate-fade-in rounded-xl border border-ink-line bg-ink-soft p-3.5">
@@ -102,14 +140,24 @@ function PendingOrderRow({ sale, onAccept }: { sale: PendingSale; onAccept: () =
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={onAccept}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-champ py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover active:scale-[0.98]"
-      >
-        <Check className="h-4 w-4" />
-        {t("pos.acceptOrder")}
-      </button>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onReject}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-ink-line px-3 py-2 text-sm font-medium text-white/60 transition hover:border-danger/50 hover:text-danger-soft"
+        >
+          <X className="h-4 w-4" />
+          {t("pos.pending.reject")}
+        </button>
+        <button
+          type="button"
+          onClick={onAccept}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-champ py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover active:scale-[0.98]"
+        >
+          <Check className="h-4 w-4" />
+          {t("pos.acceptOrder")}
+        </button>
+      </div>
     </div>
   );
 }

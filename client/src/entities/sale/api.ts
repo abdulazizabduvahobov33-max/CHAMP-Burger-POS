@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/shared/lib/api";
+import { useNotificationStore } from "@/shared/notifications/notificationStore";
 import type { AcceptSaleInput, CreateSaleInput, MySalesList, PendingSale, Sale } from "./model";
 
-const PENDING_SALES_KEY = ["sales", "pending"] as const;
+export const PENDING_SALES_KEY = ["sales", "pending"] as const;
 
 export function useCreateSale() {
   const queryClient = useQueryClient();
@@ -38,10 +39,10 @@ export function usePendingSales() {
       const { data } = await api.get<{ items: PendingSale[] }>("/sales/pending");
       return data.items;
     },
-    // This is a live register queue, not a report — a waiter's order should surface without the
-    // admin having to manually refresh. Mutations already invalidate it instantly; the interval
-    // just covers the gap between two admins/tabs or a slow network round-trip.
-    refetchInterval: 8000,
+    // No refetchInterval — this used to poll every 8s, but the notification stream
+    // (shared/notifications/useNotificationStream.ts) now invalidates this query the instant an
+    // order.new/accepted/rejected event arrives over SSE, so a timed poll would only ever be
+    // late compared to the push, never earlier. See docs on why: real-time push, not refresh.
   });
 }
 
@@ -52,10 +53,28 @@ export function useAcceptSale() {
       const { data } = await api.post<{ sale: Sale }>(`/sales/${id}/accept`, input);
       return data.sale;
     },
-    onSuccess: () => {
+    onSuccess: (sale) => {
       queryClient.invalidateQueries({ queryKey: PENDING_SALES_KEY });
       queryClient.invalidateQueries({ queryKey: ["ingredients"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      // Don't wait for the SSE echo of this exact action to clear its own popup card — the
+      // notification stream still handles every OTHER tab/admin.
+      useNotificationStore.getState().resolveOrderNotification(sale.id);
+    },
+  });
+}
+
+export function useRejectSale() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post<{ sale: Sale }>(`/sales/${id}/reject`);
+      return data.sale;
+    },
+    onSuccess: (sale) => {
+      queryClient.invalidateQueries({ queryKey: PENDING_SALES_KEY });
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      useNotificationStore.getState().resolveOrderNotification(sale.id);
     },
   });
 }

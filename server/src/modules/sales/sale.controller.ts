@@ -40,3 +40,8 @@ export async function accept(req: Request, res: Response) {
   const sale = await saleService.acceptSale(req.user!.locationId, req.params.id, input.cashReceived);
   res.json({ sale });
 }
+
+export async function reject(req: Request, res: Response) {
+  const sale = await saleService.rejectSale(req.user!.locationId, req.params.id);
+  res.json({ sale });
+}

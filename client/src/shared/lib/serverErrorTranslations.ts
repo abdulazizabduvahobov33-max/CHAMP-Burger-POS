@@ -25,6 +25,7 @@ const UZ_BY_RU: Record<string, string> = {
   "Добавьте хотя бы один вариант цены": "Kamida bitta narx varianti qo'shing",
   "Добавьте хотя бы один ингредиент": "Kamida bitta ingredient qo'shing",
   "Добавьте хотя бы одну позицию": "Kamida bitta pozitsiya qo'shing",
+  "Заказ уже обработан": "Buyurtma allaqachon ko'rib chiqilgan",
   "Закупка не найдена": "Xarid topilmadi",
   "Изображение используется товаром": "Rasm mahsulot tomonidan ishlatilmoqda",
   "Ингредиент не может повторяться в одном рецепте": "Ingredient bitta retseptda takrorlanishi mumkin emas",

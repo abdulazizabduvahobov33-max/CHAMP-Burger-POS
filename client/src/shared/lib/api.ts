@@ -2,7 +2,11 @@ import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
 import { useAuthStore, type AuthUser } from "@/shared/stores/authStore";
 
-const baseURL = import.meta.env.VITE_API_URL ?? "/api";
+// Exported (not just a local const) so anything that can't go through the axios instance itself
+// — the SSE stream in shared/notifications, which needs a plain URL string for `new
+// EventSource(...)` — still resolves the backend origin the exact same way, split-host deploys
+// included, instead of re-deriving it.
+export const baseURL = import.meta.env.VITE_API_URL ?? "/api";
 
 // A relative "/api" is only correct when something (nginx, a platform rewrite) proxies it to
 // the backend on this SAME domain. On a split-host deploy (a static frontend + a separate

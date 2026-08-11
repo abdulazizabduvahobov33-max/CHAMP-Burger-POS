@@ -6,6 +6,7 @@ import { ensureIngredientsSeeded } from "./bootstrap/ensureIngredientsSeeded.js"
 import { ensureMenuSeeded } from "./bootstrap/ensureMenuSeeded.js";
 import { purgeLegacyMenu } from "./bootstrap/purgeLegacyMenu.js";
 import { rebrandCafeName } from "./bootstrap/rebrandCafeName.js";
+import { refreshMenuPhotos } from "./bootstrap/refreshMenuPhotos.js";
 
 async function bootstrap() {
   await ensureAdminExists();
@@ -13,6 +14,7 @@ async function bootstrap() {
   await purgeLegacyMenu();
   await rebrandCafeName();
   await ensureMenuSeeded();
+  await refreshMenuPhotos();
   await ensureIngredientsSeeded();
 
   const app = createApp();

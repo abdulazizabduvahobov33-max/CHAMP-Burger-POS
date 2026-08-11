@@ -79,7 +79,7 @@ export const MENU: MenuItem[] = [
   {
     name: "Лаваш",
     category: CATEGORY.LAVASH,
-    imageFile: "34c91837-6514-4899-a493-088a13fa0fc1.jpg",
+    imageFile: "855e0d34-7de7-41f5-9cdf-449c3b2c1d28.jpg",
     variants: [
       { label: "30 000", price: 30000 },
       { label: "35 000", price: 35000 },
@@ -98,7 +98,7 @@ export const MENU: MenuItem[] = [
   {
     name: "Самса с бараниной",
     category: CATEGORY.SAMSA,
-    imageFile: "30698c88-01c0-4584-89da-e6ef333eb7b4.jpg",
+    imageFile: "cb5b034c-4d58-448b-ba42-f8f6a6da923f.jpg",
     variants: [{ label: "12 000", price: 12000 }],
   },
   {
@@ -109,9 +109,9 @@ export const MENU: MenuItem[] = [
   },
 
   // Напитки
-  { name: "Cola", category: CATEGORY.DRINKS, imageFile: "5615f450-6eff-4ba7-86e4-e75c44e0a286.jpg", variants: SODA_VARIANTS },
-  { name: "Fanta", category: CATEGORY.DRINKS, imageFile: "5523a63f-488b-4f23-8abc-63fb7e4e1b38.jpg", variants: SODA_VARIANTS },
-  { name: "Pepsi", category: CATEGORY.DRINKS, imageFile: "8da2e0d3-8579-4e66-b4cb-ff43aa786830.jpg", variants: SODA_VARIANTS },
+  { name: "Cola", category: CATEGORY.DRINKS, imageFile: "4f882963-c9fd-4270-8555-8104fec7e28e.jpg", variants: SODA_VARIANTS },
+  { name: "Fanta", category: CATEGORY.DRINKS, imageFile: "d32e3642-ee88-43e9-82bb-e083e2b7f697.jpg", variants: SODA_VARIANTS },
+  { name: "Pepsi", category: CATEGORY.DRINKS, imageFile: "a6c8f577-5e6e-429f-9047-8440a5b6d5bc.jpg", variants: SODA_VARIANTS },
   {
     name: "Вода без газа",
     category: CATEGORY.DRINKS,
@@ -148,7 +148,7 @@ export const MENU: MenuItem[] = [
   {
     name: "Фруктовый коктейль",
     category: CATEGORY.DRINKS,
-    imageFile: "ca0ff521-49da-4b37-abbc-a43941a1e152.jpg",
+    imageFile: "f8e24ac8-ae99-432a-a18d-2c3be7f673ae.jpg",
     variants: [{ label: "15 000", price: 15000 }],
   },
 
@@ -170,7 +170,7 @@ export const MENU: MenuItem[] = [
     name: "Мороженое на вес",
     category: CATEGORY.DESSERTS,
     saleType: SaleType.WEIGHT,
-    imageFile: "1c4e1bd5-02e9-43aa-b129-114f23817be8.jpg",
+    imageFile: "2fd839f4-3acd-41db-92e7-6fbc67dacbb0.jpg",
     variants: [{ label: "1 кг", price: 60000 }],
   },
 ];

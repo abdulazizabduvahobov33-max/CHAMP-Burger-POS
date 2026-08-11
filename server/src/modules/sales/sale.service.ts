@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
+import { newNotificationId, notificationBus } from "../../shared/notifications/notificationBus.js";
 import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { deductRecipeIngredients } from "../recipes/recipe.service.js";
 import type { SaleItemInput } from "./sale.schema.js";
@@ -207,7 +208,32 @@ export async function createSale(
     return sale.id;
   });
 
-  return getSale(saleId);
+  const sale = await getSale(saleId);
+
+  if (!autoAccept) {
+    // Fire-and-forget: this is a best-effort real-time nudge, not part of the sale's own
+    // correctness — if nobody's connected right now, the order still sits in listPendingSales()
+    // for the admin to find on their next visit either way. See notificationBus.ts.
+    const seller = await prisma.user.findUnique({ where: { id: sellerId }, select: { name: true } });
+    notificationBus.publish(locationId, {
+      id: newNotificationId(),
+      type: "order.new",
+      title: "Новый заказ",
+      message: `${seller?.name ?? "Официант"} — ${sale.items.length} поз. на ${sale.totalAmount}`,
+      createdAt: new Date().toISOString(),
+      roles: ["SUPER_ADMIN"],
+      data: {
+        saleId: sale.id,
+        sellerId,
+        sellerName: seller?.name ?? null,
+        receiptNumber: sale.receiptNumber,
+        totalAmount: sale.totalAmount,
+        itemCount: sale.items.length,
+      },
+    });
+  }
+
+  return sale;
 }
 
 /**
@@ -218,13 +244,16 @@ export async function createSale(
  * sale stays PENDING for the admin to retry or reject.
  */
 export async function acceptSale(locationId: string, id: string, cashReceived?: number) {
-  await prisma.$transaction(async (tx) => {
+  const sellerId = await prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findFirst({ where: { id, locationId }, include: { items: true } });
     if (!sale) {
       throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
     }
-    if (sale.status === "ACCEPTED") {
-      throw new AppError(409, "ALREADY_ACCEPTED", "Заказ уже принят");
+    // Not just `=== "ACCEPTED"` — a REJECTED sale must be just as immovable as an already-
+    // ACCEPTED one, or a stale "Принять заказ" click (e.g. two admins working the same queue)
+    // could resurrect an order the cashier already declined.
+    if (sale.status !== "PENDING") {
+      throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
     }
 
     for (const item of sale.items) {
@@ -249,9 +278,59 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
         changeGiven,
       },
     });
+
+    return sale.sellerId;
   });
 
-  return getSale(id);
+  const sale = await getSale(id);
+  notificationBus.publish(locationId, {
+    id: newNotificationId(),
+    type: "order.accepted",
+    title: "Заказ принят",
+    message: `Заказ №${sale.receiptNumber} принят`,
+    createdAt: new Date().toISOString(),
+    // SELLER so the waiter who sent it finds out; SUPER_ADMIN too — a second admin tab/device
+    // has no other way to know this order just left the pending queue, now that the queue no
+    // longer polls (see usePendingSales()'s comment on why polling was removed).
+    roles: ["SELLER", "SUPER_ADMIN"],
+    data: { saleId: sale.id, sellerId, receiptNumber: sale.receiptNumber },
+  });
+
+  return sale;
+}
+
+/**
+ * Admin-only: declines a PENDING sale instead of accepting it. Nothing was ever touched at
+ * creation time (stock, payment) for a PENDING sale — so unlike acceptSale, there's nothing to
+ * roll back or compensate, just a status flip. The seller who sent it gets notified so they know
+ * to follow up with the customer rather than assuming it's quietly on its way.
+ */
+export async function rejectSale(locationId: string, id: string) {
+  const sellerId = await prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findFirst({ where: { id, locationId } });
+    if (!sale) {
+      throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
+    }
+    if (sale.status !== "PENDING") {
+      throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
+    }
+
+    await tx.sale.update({ where: { id: sale.id }, data: { status: "REJECTED" } });
+    return sale.sellerId;
+  });
+
+  const sale = await getSale(id);
+  notificationBus.publish(locationId, {
+    id: newNotificationId(),
+    type: "order.rejected",
+    title: "Заказ отклонён",
+    message: `Заказ №${sale.receiptNumber} отклонён`,
+    createdAt: new Date().toISOString(),
+    roles: ["SELLER", "SUPER_ADMIN"],
+    data: { saleId: sale.id, sellerId, receiptNumber: sale.receiptNumber },
+  });
+
+  return sale;
 }
 
 /**

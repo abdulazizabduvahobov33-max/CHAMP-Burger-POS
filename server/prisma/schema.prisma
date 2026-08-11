@@ -49,6 +49,7 @@ enum SaleType {
 enum SaleStatus {
   PENDING
   ACCEPTED
+  REJECTED
 }
 
 enum StockReason {

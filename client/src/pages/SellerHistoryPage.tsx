@@ -90,6 +90,11 @@ export default function SellerHistoryPage() {
                         {t("sale.statusPending")}
                       </span>
                     )}
+                    {sale.status === "REJECTED" && (
+                      <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-bold text-danger-soft">
+                        {t("sale.statusRejected")}
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}

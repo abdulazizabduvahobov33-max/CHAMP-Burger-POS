@@ -26,6 +26,7 @@ router.get("/", asyncHandler(controller.list));
 // match "pending" as an :id instead.
 router.get("/pending", authorize("SUPER_ADMIN"), asyncHandler(controller.pending));
 router.post("/:id/accept", authorize("SUPER_ADMIN"), createSaleLimiter, asyncHandler(controller.accept));
+router.post("/:id/reject", authorize("SUPER_ADMIN"), createSaleLimiter, asyncHandler(controller.reject));
 router.get("/:id", asyncHandler(controller.detail));
 
 export default router;

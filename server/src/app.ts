@@ -21,6 +21,7 @@ import reportRoutes from "./modules/reports/report.routes.js";
 import supplierRoutes from "./modules/suppliers/supplier.routes.js";
 import purchaseRoutes from "./modules/purchases/purchase.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
+import notificationRoutes from "./modules/notifications/notification.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import { receiptInfo } from "./modules/settings/settings.controller.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
@@ -125,6 +126,10 @@ export function createApp() {
   app.use("/api/suppliers", authenticate, authorize("SUPER_ADMIN"), supplierRoutes);
   app.use("/api/purchases", authenticate, authorize("SUPER_ADMIN"), purchaseRoutes);
   app.use("/api/users", authenticate, authorize("SUPER_ADMIN"), userRoutes);
+  // Authenticates itself (query-token, not the Authorization header — EventSource can't set
+  // custom headers) inside notification.controller.ts, so it deliberately skips the shared
+  // `authenticate` middleware other route groups use.
+  app.use("/api/notifications", notificationRoutes);
   app.use("/api/settings", authenticate, authorize("SUPER_ADMIN"), settingsRoutes);
   // The one settings slice a SELLER also needs — the company/receipt text printed on every
   // checkout. Registered separately (not nested under /api/settings) so it isn't caught by that
