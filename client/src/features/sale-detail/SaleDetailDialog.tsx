@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 
 import { useSaleDetail } from "@/entities/report/api";
-import { formatPrice, profitColorClass } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity, profitColorClass } from "@/entities/product/lib";
 import { dateFnsLocale } from "@/shared/lib/dateLocale";
 import { Dialog } from "@/shared/ui/Dialog";
 import { Skeleton, SkeletonTableRows } from "@/shared/ui/Skeleton";
@@ -55,9 +55,9 @@ export function SaleDetailDialog({ saleId, onClose }: SaleDetailDialogProps) {
                   <tr key={item.id}>
                     <td className="px-4 py-2">
                       <p className="text-white">{item.productName}</p>
-                      <p className="text-xs text-white/40">{item.variantLabel}</p>
+                      {item.saleType !== "WEIGHT" && <p className="text-xs text-white/40">{item.variantLabel}</p>}
                     </td>
-                    <td className="px-4 py-2 text-white/70">{item.quantity}</td>
+                    <td className="px-4 py-2 text-white/70">{formatSaleQuantity(item.quantity, item.saleType)}</td>
                     <td className="px-4 py-2 text-white/70">{formatPrice(item.unitPrice)}</td>
                     <td className="px-4 py-2 font-semibold text-champ">{formatPrice(item.subtotal)}</td>
                     <td className="px-4 py-2 text-white/50">{item.hasCostData ? formatPrice(item.cost) : "—"}</td>

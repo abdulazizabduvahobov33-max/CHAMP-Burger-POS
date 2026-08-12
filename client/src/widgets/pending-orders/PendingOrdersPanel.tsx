@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, Clock, Loader2, ShoppingBag, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import { useAcceptSale, usePendingSales, useRejectSale } from "@/entities/sale/api";
 import type { PendingSale } from "@/entities/sale/model";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
@@ -135,8 +135,8 @@ function PendingOrderRow({
       <ul className="mt-2 space-y-0.5 text-xs text-white/50">
         {sale.items.map((item) => (
           <li key={item.id} className="truncate">
-            {item.quantity} × {item.productName}
-            {item.variantLabel ? ` (${item.variantLabel})` : ""}
+            {formatSaleQuantity(item.quantity, item.saleType)} × {item.productName}
+            {item.saleType !== "WEIGHT" && item.variantLabel ? ` (${item.variantLabel})` : ""}
           </li>
         ))}
       </ul>

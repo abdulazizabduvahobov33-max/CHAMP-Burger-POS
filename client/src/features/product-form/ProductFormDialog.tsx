@@ -14,6 +14,14 @@ type VariantRow = { id?: string; label: string; price: string };
 
 const EMPTY_VARIANT: VariantRow = { label: "", price: "" };
 
+// A WEIGHT product is stored exactly like any other — one ProductVariant row — but the *admin*
+// only ever sees/edits a single "price per kg" field, not a general label+price list; this fixed
+// label is what actually gets saved as that row's `label`, matching the convention every seeded
+// weight product (KFS, Мороженое на вес) already uses. Changing this string would only rename
+// future products' variant label, never break anything reading `saleType` (which is the real
+// signal every weight-aware display uses — see entities/product/lib.ts's formatSaleQuantity).
+const WEIGHT_VARIANT_LABEL = "1 кг";
+
 type ProductFormDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -52,6 +60,19 @@ export function ProductFormDialog({ open, onClose, product }: ProductFormDialogP
     mutation.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, product]);
+
+  // Collapses to exactly one row the moment "Весовой" is selected — whether that's from loading
+  // an existing weight product (the row is already normalized, this is a no-op) or the admin
+  // just switching the dropdown while multiple UNIT-style variant rows are still in state, which
+  // would otherwise silently keep those extra rows around, submitting several priced "variants"
+  // for what the single-price UI below only shows/edits one of.
+  useEffect(() => {
+    if (saleType !== "WEIGHT") return;
+    setVariants((rows) => {
+      if (rows.length === 1 && rows[0].label === WEIGHT_VARIANT_LABEL) return rows;
+      return [{ id: rows[0]?.id, label: WEIGHT_VARIANT_LABEL, price: rows[0]?.price ?? "" }];
+    });
+  }, [saleType]);
 
   function isUnsavedUpload(url: string | null): url is string {
     return url !== null && url !== initialImageUrlRef.current;
@@ -214,52 +235,74 @@ export function ProductFormDialog({ open, onClose, product }: ProductFormDialogP
           </Field>
         </div>
 
-        <div>
-          <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/40">
-            {t("product.form.variants")}
-          </span>
-          <div className="space-y-2">
-            {variants.map((row, i) => (
-              <div key={i} className="flex gap-2">
-                <input
-                  value={row.label}
-                  onChange={(e) => updateVariant(i, { label: e.target.value })}
-                  placeholder={t("product.form.variantLabelPlaceholder")}
-                  className="input flex-1"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={row.price}
-                  onChange={(e) => updateVariant(i, { price: e.target.value })}
-                  placeholder={t("product.form.variantPricePlaceholder")}
-                  className="input w-28"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeVariant(i)}
-                  disabled={variants.length <= 1}
-                  aria-label={t("product.form.removeVariant")}
-                  className="shrink-0 rounded-lg p-2 text-white/40 transition hover:text-danger-soft disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+        {saleType === "WEIGHT" ? (
+          <Field label={t("product.form.pricePerKg")}>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={variants[0]?.price ?? ""}
+                onChange={(e) => updateVariant(0, { label: WEIGHT_VARIANT_LABEL, price: e.target.value })}
+                placeholder={t("product.form.variantPricePlaceholder")}
+                className="input pr-14"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-white/40">
+                {t("pos.weight.perKgSuffix")}
+              </span>
+            </div>
+            {validVariants.length === 0 && (
+              <p className="mt-2 text-xs text-danger-soft">{t("product.form.priceRequired")}</p>
+            )}
+          </Field>
+        ) : (
+          <div>
+            <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/40">
+              {t("product.form.variants")}
+            </span>
+            <div className="space-y-2">
+              {variants.map((row, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={row.label}
+                    onChange={(e) => updateVariant(i, { label: e.target.value })}
+                    placeholder={t("product.form.variantLabelPlaceholder")}
+                    className="input flex-1"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={row.price}
+                    onChange={(e) => updateVariant(i, { price: e.target.value })}
+                    placeholder={t("product.form.variantPricePlaceholder")}
+                    className="input w-28"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(i)}
+                    disabled={variants.length <= 1}
+                    aria-label={t("product.form.removeVariant")}
+                    className="shrink-0 rounded-lg p-2 text-white/40 transition hover:text-danger-soft disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addVariant}
+              className="mt-2 flex items-center gap-1.5 text-xs font-medium text-champ transition hover:text-champ-hover"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("product.form.addVariant")}
+            </button>
+            {validVariants.length === 0 && (
+              <p className="mt-2 text-xs text-danger-soft">{t("product.form.variantsRequired")}</p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={addVariant}
-            className="mt-2 flex items-center gap-1.5 text-xs font-medium text-champ transition hover:text-champ-hover"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t("product.form.addVariant")}
-          </button>
-          {validVariants.length === 0 && (
-            <p className="mt-2 text-xs text-danger-soft">{t("product.form.variantsRequired")}</p>
-          )}
-        </div>
+        )}
 
         {mutation.isError && (
           <div role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger-soft">

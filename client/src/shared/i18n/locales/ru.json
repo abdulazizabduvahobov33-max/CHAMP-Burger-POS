@@ -134,6 +134,8 @@
       "removeVariant": "Удалить вариант",
       "addVariant": "Добавить вариант",
       "variantsRequired": "Добавьте хотя бы один вариант с названием и ценой",
+      "pricePerKg": "Цена за 1 кг",
+      "priceRequired": "Укажите цену за 1 кг",
       "imageUploadFailed": "Не удалось загрузить изображение",
       "createSuccess": "Товар создан",
       "updateSuccess": "Товар обновлён"
@@ -321,6 +323,14 @@
     "decreaseQuantity": "Уменьшить количество",
     "increaseQuantity": "Увеличить количество",
     "removeFromCart": "Удалить из корзины",
+    "weight": {
+      "pricePerKg": "Цена за 1 кг",
+      "enterWeight": "Введите вес",
+      "gramsShort": "г",
+      "perKgSuffix": "/кг",
+      "add": "Добавить",
+      "edit": "Изменить"
+    },
     "searchPlaceholder": "Поиск товаров…",
     "allCategories": "Все",
     "emptyTitle": "Меню пока пусто",

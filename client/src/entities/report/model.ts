@@ -1,4 +1,5 @@
 import type { Unit } from "@/entities/ingredient/model";
+import type { SaleType } from "@/entities/product/model";
 
 export type DatePreset = "today" | "yesterday" | "week" | "month" | "custom";
 
@@ -58,6 +59,7 @@ export type ProductProfitability = {
   variantId: string;
   productName: string;
   variantLabel: string;
+  saleType: SaleType;
   quantitySold: string;
   revenue: string;
   cost: string;
@@ -120,6 +122,7 @@ export type SaleDetailItem = {
   id: string;
   productName: string;
   variantLabel: string;
+  saleType: SaleType;
   quantity: string;
   unitPrice: string;
   subtotal: string;
@@ -146,6 +149,7 @@ export type TopProduct = {
   variantId: string;
   productName: string;
   variantLabel: string;
+  saleType: SaleType;
   quantitySold: string;
   revenue: string;
 };

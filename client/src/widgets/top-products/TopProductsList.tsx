@@ -2,7 +2,7 @@ import { Trophy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTopProducts } from "@/entities/report/api";
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import { isDateFilterReady, type DateFilter } from "@/entities/report/model";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/shared/ui/Skeleton";
@@ -48,11 +48,15 @@ export function TopProductsList({ filter }: { filter: DateFilter }) {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm text-white">{product.productName}</p>
-                  <p className="truncate text-xs text-white/40">{product.variantLabel}</p>
+                  {product.saleType !== "WEIGHT" && <p className="truncate text-xs text-white/40">{product.variantLabel}</p>}
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold text-champ">{t("dashboard.unitsSoldSuffix", { count: product.quantitySold })}</p>
+                <p className="text-sm font-semibold text-champ">
+                  {product.saleType === "WEIGHT"
+                    ? formatSaleQuantity(product.quantitySold, product.saleType)
+                    : t("dashboard.unitsSoldSuffix", { count: product.quantitySold })}
+                </p>
                 <p className="text-xs text-white/30">{formatPrice(product.revenue)}</p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import type { Sale } from "@/entities/sale/model";
 import type { ReceiptSettings } from "@/entities/setting/model";
 import i18n from "@/shared/i18n";
@@ -37,9 +37,20 @@ export function buildReceiptDocument(sale: Sale, settings: ReceiptSettings, pape
   }
 
   for (const item of sale.items) {
-    const label = item.variantLabel && item.variantLabel !== item.productName ? `${item.productName} (${item.variantLabel})` : item.productName;
+    // A WEIGHT item's variantLabel is just the pricing tier ("1 кг"), not anything describing
+    // *this* sale — the actual weight sold is already the quantity row right below, so pairing
+    // it into the title here would just repeat "(1 кг)" on every weighed item regardless of how
+    // much was actually sold.
+    const label =
+      item.saleType !== "WEIGHT" && item.variantLabel && item.variantLabel !== item.productName
+        ? `${item.productName} (${item.variantLabel})`
+        : item.productName;
     lines.push({ type: "text", value: label });
-    lines.push({ type: "row", left: `  ${item.quantity} × ${formatPrice(item.unitPrice)}`, right: formatPrice(item.subtotal) });
+    lines.push({
+      type: "row",
+      left: `  ${formatSaleQuantity(item.quantity, item.saleType)} × ${formatPrice(item.unitPrice)}`,
+      right: formatPrice(item.subtotal),
+    });
   }
   lines.push({ type: "rule" });
 

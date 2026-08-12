@@ -1,3 +1,5 @@
+import type { SaleType } from "@/entities/product/model";
+
 export type SaleItemLine = {
   variantId: string;
   quantity: number;
@@ -13,6 +15,7 @@ export type SaleItemResult = {
   variantId: string;
   productName: string;
   variantLabel: string;
+  saleType: SaleType;
   quantity: string;
   unitPrice: string;
   subtotal: string;
@@ -58,6 +61,7 @@ export type PendingSaleItem = {
   id: string;
   productName: string;
   variantLabel: string;
+  saleType: SaleType;
   quantity: string;
   subtotal: string;
 };

@@ -9,6 +9,7 @@ import type { Product, ProductVariant } from "@/entities/product/model";
 import { ProductImage } from "@/entities/product/ui/ProductImage";
 import { useDebouncedValue } from "@/shared/lib/useDebouncedValue";
 import { useCartStore } from "@/shared/stores/cartStore";
+import { useWeightEntryStore } from "@/shared/stores/weightEntryStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Pagination } from "@/shared/ui/Pagination";
 import { SkeletonProductCard } from "@/shared/ui/Skeleton";
@@ -27,6 +28,8 @@ export function PosMenu() {
   // truncates once a location's catalog outgrows a single page — see Module 4's ProductsTable.
   const { data, isLoading } = useProducts({ search, categoryId: categoryId || undefined, isActive: true, page, pageSize: PAGE_SIZE });
   const addItem = useCartStore((s) => s.addItem);
+  const cartLines = useCartStore((s) => s.lines);
+  const openWeightEntry = useWeightEntryStore((s) => s.open);
 
   const products = data?.items ?? [];
 
@@ -45,6 +48,29 @@ export function PosMenu() {
       variantLabel: variant.label,
       imageUrl: product.imageUrl,
       unitPrice: variant.price,
+      saleType: product.saleType,
+    });
+  }
+
+  // A WEIGHT product never goes straight into the cart on tap — the price depends on how much of
+  // it is being sold, which nobody knows yet at click time. Opens the weight dialog instead (see
+  // shared/stores/weightEntryStore.ts); if this exact variant is already in the cart, pre-fills
+  // the dialog with its current weight so re-tapping the card is how you *adjust* an amount
+  // already added, not how you add a confusing second line for the same product.
+  function handleCardTap(product: Product, variant: ProductVariant) {
+    if (product.saleType !== "WEIGHT") {
+      handleAdd(product, variant);
+      return;
+    }
+    const existing = cartLines.find((l) => l.variantId === variant.id);
+    openWeightEntry({
+      variantId: variant.id,
+      productId: product.id,
+      productName: product.name,
+      variantLabel: variant.label,
+      imageUrl: product.imageUrl,
+      unitPrice: variant.price,
+      initialGrams: existing ? Math.round(existing.quantity * 1000) : undefined,
     });
   }
 
@@ -105,7 +131,7 @@ export function PosMenu() {
         {!isLoading && products.length > 0 && (
           <div key={`${search}-${categoryId}-${page}`} className="grid animate-fade-in grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => (
-              <PosProductCard key={product.id} product={product} onAdd={(variant) => handleAdd(product, variant)} />
+              <PosProductCard key={product.id} product={product} onAdd={(variant) => handleCardTap(product, variant)} />
             ))}
           </div>
         )}
@@ -139,12 +165,18 @@ function CategoryPill({
 }
 
 function PosProductCard({ product, onAdd }: { product: Product; onAdd: (variant: ProductVariant) => void }) {
+  const { t } = useTranslation();
+  const isWeight = product.saleType === "WEIGHT";
   const singleVariant = product.variants.length === 1 ? product.variants[0] : null;
   const [justAdded, setJustAdded] = useState(false);
   const flashTimeoutRef = useRef<number>();
 
   function handleAdd(variant: ProductVariant) {
     onAdd(variant);
+    // A WEIGHT tap opens the weight dialog (see PosMenu's handleCardTap) instead of adding
+    // anything immediately — the checkmark flash belongs to an item that just landed in the
+    // cart, which hasn't happened yet here.
+    if (isWeight) return;
     setJustAdded(true);
     window.clearTimeout(flashTimeoutRef.current);
     flashTimeoutRef.current = window.setTimeout(() => setJustAdded(false), 600);
@@ -185,6 +217,7 @@ function PosProductCard({ product, onAdd }: { product: Product; onAdd: (variant:
             className="mt-2 w-full rounded-xl bg-champ/15 py-2 text-sm font-bold text-champ transition hover:bg-champ hover:text-onaccent active:scale-95"
           >
             {formatPrice(singleVariant.price)}
+            {isWeight && <span className="text-champ/60"> {t("pos.weight.perKgSuffix")}</span>}
           </button>
         ) : (
           <div className="mt-2 flex flex-wrap gap-1.5">

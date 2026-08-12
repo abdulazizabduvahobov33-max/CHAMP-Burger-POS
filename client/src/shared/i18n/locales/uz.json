@@ -134,6 +134,8 @@
       "removeVariant": "Variantni o'chirish",
       "addVariant": "Variant qo'shish",
       "variantsRequired": "Kamida bitta nomi va narxi bo'lgan variant qo'shing",
+      "pricePerKg": "1 kg narxi",
+      "priceRequired": "1 kg narxini kiriting",
       "imageUploadFailed": "Rasmni yuklab bo'lmadi",
       "createSuccess": "Mahsulot yaratildi",
       "updateSuccess": "Mahsulot yangilandi"
@@ -321,6 +323,14 @@
     "decreaseQuantity": "Miqdorni kamaytirish",
     "increaseQuantity": "Miqdorni oshirish",
     "removeFromCart": "Savatdan o'chirish",
+    "weight": {
+      "pricePerKg": "1 kg narxi",
+      "enterWeight": "Vaznni kiriting",
+      "gramsShort": "g",
+      "perKgSuffix": "/kg",
+      "add": "Qo'shish",
+      "edit": "O'zgartirish"
+    },
     "searchPlaceholder": "Mahsulot qidirish…",
     "allCategories": "Barchasi",
     "emptyTitle": "Menyu hozircha bo'sh",

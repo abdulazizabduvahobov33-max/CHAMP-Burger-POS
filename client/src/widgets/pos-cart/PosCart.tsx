@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Minus, Plus, Printer, ShoppingCart, Trash2, X } from "lucide-react";
+import { Minus, Pencil, Plus, Printer, ShoppingCart, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useCreateSale } from "@/entities/sale/api";
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import type { Sale } from "@/entities/sale/model";
 import { ProductImage } from "@/entities/product/ui/ProductImage";
+import { WeightEntryDialog } from "@/features/pos-weight-entry/WeightEntryDialog";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { useCartStore, type CartLine } from "@/shared/stores/cartStore";
+import { useWeightEntryStore } from "@/shared/stores/weightEntryStore";
 import { toast } from "@/shared/stores/toastStore";
 
 function cartTotal(lines: CartLine[]): number {
@@ -115,7 +117,12 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
           >
             <span className="flex items-center gap-2 font-semibold">
               <ShoppingCart className="h-4 w-4" />
-              {lines.length === 0 ? t("pos.cartEmpty") : t("pos.itemsCount", { count: lines.reduce((n, l) => n + l.quantity, 0) })}
+              {lines.length === 0
+                ? t("pos.cartEmpty")
+                : // A weighed line counts as one position here, not its fractional kilogram
+                  // amount — "2.8" would misread as a typo where "3" (2 counted items + 1
+                  // weighed one) reads as an actual item count.
+                  t("pos.itemsCount", { count: lines.reduce((n, l) => n + (l.saleType === "WEIGHT" ? 1 : l.quantity), 0) })}
             </span>
             {lines.length > 0 && <span className="font-bold">{formatPrice(String(total))} →</span>}
           </button>
@@ -147,6 +154,11 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
         error={checkoutError}
         onConfirm={handlePaymentConfirm}
       />
+
+      {/* Global, not scoped to this cart instance — PosMenu opens the same dialog (see
+          shared/stores/weightEntryStore.ts) when a WEIGHT product is tapped. Mounted here
+          because PosCart is the one thing guaranteed to render once per POS page. */}
+      <WeightEntryDialog />
     </>
   );
 }
@@ -279,7 +291,21 @@ function CartLineRow({
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
+  const isWeight = line.saleType === "WEIGHT";
   const subtotal = Number(line.unitPrice) * line.quantity;
+  const openWeightEntry = useWeightEntryStore((s) => s.open);
+
+  function handleEditWeight() {
+    openWeightEntry({
+      variantId: line.variantId,
+      productId: line.productId,
+      productName: line.productName,
+      variantLabel: line.variantLabel,
+      imageUrl: line.imageUrl,
+      unitPrice: line.unitPrice,
+      initialGrams: Math.round(line.quantity * 1000),
+    });
+  }
 
   return (
     <div className="flex animate-fade-in items-center gap-3 rounded-xl border border-ink-line bg-ink-soft p-3">
@@ -287,18 +313,32 @@ function CartLineRow({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{line.productName}</p>
-        <p className="truncate text-xs text-white/40">{line.variantLabel}</p>
+        <p className="truncate text-xs text-white/40">
+          {isWeight ? `${formatSaleQuantity(line.quantity, "WEIGHT")} × ${formatPrice(line.unitPrice)}` : line.variantLabel}
+        </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <IconStepperButton label={t("pos.decreaseQuantity")} onClick={onDecrement}>
-          <Minus className="h-3.5 w-3.5" />
-        </IconStepperButton>
-        <span className="w-6 text-center text-sm font-bold text-white">{line.quantity}</span>
-        <IconStepperButton label={t("pos.increaseQuantity")} onClick={onIncrement}>
-          <Plus className="h-3.5 w-3.5" />
-        </IconStepperButton>
-      </div>
+      {isWeight ? (
+        <button
+          type="button"
+          onClick={handleEditWeight}
+          aria-label={t("pos.weight.edit")}
+          className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-ink-line px-2.5 text-xs font-medium text-white/60 transition hover:border-champ/50 hover:text-white"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          {t("pos.weight.edit")}
+        </button>
+      ) : (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <IconStepperButton label={t("pos.decreaseQuantity")} onClick={onDecrement}>
+            <Minus className="h-3.5 w-3.5" />
+          </IconStepperButton>
+          <span className="w-6 text-center text-sm font-bold text-white">{line.quantity}</span>
+          <IconStepperButton label={t("pos.increaseQuantity")} onClick={onIncrement}>
+            <Plus className="h-3.5 w-3.5" />
+          </IconStepperButton>
+        </div>
+      )}
 
       <div className="w-16 shrink-0 text-right text-sm font-bold text-champ">{formatPrice(String(subtotal))}</div>
 

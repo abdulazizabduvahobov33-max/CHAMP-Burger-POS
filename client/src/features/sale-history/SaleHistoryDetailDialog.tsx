@@ -3,7 +3,7 @@ import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useMySaleDetail } from "@/entities/sale/api";
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import { dateFnsLocale } from "@/shared/lib/dateLocale";
 import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { toast } from "@/shared/stores/toastStore";
@@ -69,7 +69,9 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
                 <div className="min-w-0">
                   <p className="truncate text-white">{item.productName}</p>
                   <p className="text-xs text-white/40">
-                    {item.variantLabel} × {item.quantity}
+                    {item.saleType === "WEIGHT"
+                      ? `${formatSaleQuantity(item.quantity, item.saleType)} × ${formatPrice(item.unitPrice)}`
+                      : `${item.variantLabel} × ${item.quantity}`}
                   </p>
                 </div>
                 <span className="shrink-0 font-semibold text-champ">{formatPrice(item.subtotal)}</span>

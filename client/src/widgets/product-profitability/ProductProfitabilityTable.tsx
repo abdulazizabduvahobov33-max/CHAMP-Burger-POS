@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, TrendingUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useProductProfitability } from "@/entities/report/api";
-import { formatPrice, profitColorClass } from "@/entities/product/lib";
+import { formatPrice, formatSaleQuantity, profitColorClass } from "@/entities/product/lib";
 import { isDateFilterReady, type DateFilter, type ProductProfitabilitySort } from "@/entities/report/model";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Pagination } from "@/shared/ui/Pagination";
@@ -89,9 +89,9 @@ export function ProductProfitabilityTable({ filter }: { filter: DateFilter }) {
                   <tr key={row.variantId} className="transition hover:bg-ink-soft/60">
                     <td className="px-6 py-3">
                       <p className="text-white">{row.productName}</p>
-                      <p className="text-xs text-white/40">{row.variantLabel}</p>
+                      {row.saleType !== "WEIGHT" && <p className="text-xs text-white/40">{row.variantLabel}</p>}
                     </td>
-                    <td className="px-6 py-3 text-white/70">{row.quantitySold}</td>
+                    <td className="px-6 py-3 text-white/70">{formatSaleQuantity(row.quantitySold, row.saleType)}</td>
                     <td className="px-6 py-3 text-white/70">{formatPrice(row.revenue)}</td>
                     <td className="px-6 py-3 text-white/50">{row.hasCostData ? formatPrice(row.cost) : "—"}</td>
                     <td className={`px-6 py-3 font-semibold ${row.hasCostData ? profitColorClass(row.profit) : "text-white/50"}`}>
