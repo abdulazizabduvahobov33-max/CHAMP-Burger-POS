@@ -65,6 +65,7 @@
     "role": "Rol",
     "sections": {
       "register": { "title": "Buyurtma rasmiylashtirish", "subtitle": "Kassa: buyurtmalarni qabul qilish va to'lov" },
+      "tables": { "title": "Stollar", "subtitle": "Zal stollarini boshqarish" },
       "reports": { "title": "Hisobotlar", "subtitle": "Sotuvlar tahlili va statistika" },
       "products": { "title": "Mahsulotlar", "subtitle": "Menyu va kategoriyalarni boshqarish" },
       "warehouse": { "title": "Ombor", "subtitle": "Ingredientlar spravochnigi" },
@@ -353,6 +354,7 @@
   },
   "notifications": {
     "newOrderTitle": "Yangi buyurtma",
+    "waiterLabel": "Ofitsiant: {{name}}",
     "toast": {
       "orderAccepted": "№{{number}} buyurtma qabul qilindi",
       "orderRejected": "№{{number}} buyurtma rad etildi"
@@ -387,6 +389,7 @@
     "total": "Jami",
     "columns": {
       "number": "№",
+      "table": "Stol",
       "date": "Sana",
       "seller": "Sotuvchi",
       "items": "Mahsulotlar",
@@ -502,6 +505,27 @@
     "deleteFailed": "Kategoriyani o'chirib bo'lmadi",
     "renameFailed": "Nomini o'zgartirib bo'lmadi",
     "hasProducts": "Kategoriyada mahsulotlar bor"
+  },
+  "table": {
+    "title": "Stollar",
+    "add": "Stol qo'shish",
+    "createSuccess": "№{{number}} stol qo'shildi",
+    "createFailed": "Stolni qo'shib bo'lmadi",
+    "renameSuccess": "Stol raqami o'zgartirildi",
+    "renameFailed": "Stol raqamini o'zgartirib bo'lmadi",
+    "statusChangeFailed": "Stol holatini o'zgartirib bo'lmadi",
+    "deleteTitle": "Stolni o'chirish?",
+    "deleteDescription": "№{{number}} stol qaytarib bo'lmaydigan tarzda o'chiriladi.",
+    "deleteSuccess": "Stol o'chirildi",
+    "deleteFailed": "Stolni o'chirib bo'lmadi",
+    "emptyTitle": "Hozircha stollar yo'q",
+    "emptyDescription": "Birinchi stolni qo'shing — ofitsiantlar buyurtma rasmiylashtirishda uni darhol tanlay oladi",
+    "numberShort": "№{{number}} stol",
+    "numberLabel": "Stol",
+    "pickerTitle": "Stolni tanlang",
+    "pickerEmptyTitle": "Mavjud stollar yo'q",
+    "pickerEmptyDescription": "Administrator hali «Stollar» bo'limida birorta ham stol qo'shmagan",
+    "clearSelection": "Stolni bekor qilish"
   },
   "supplier": {
     "title": "Yetkazib beruvchilar",

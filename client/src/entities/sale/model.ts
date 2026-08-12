@@ -8,6 +8,7 @@ export type SaleItemLine = {
 export type CreateSaleInput = {
   items: SaleItemLine[];
   cashReceived?: number;
+  tableId?: string;
 };
 
 export type SaleItemResult = {
@@ -26,6 +27,7 @@ export type SaleStatus = "PENDING" | "ACCEPTED" | "REJECTED";
 export type Sale = {
   id: string;
   receiptNumber: string;
+  tableNumber: number | null;
   totalAmount: string;
   cashReceived: string | null;
   changeGiven: string | null;
@@ -38,6 +40,7 @@ export type Sale = {
 export type MySaleListItem = {
   id: string;
   receiptNumber: string;
+  tableNumber: number | null;
   createdAt: string;
   totalAmount: string;
   cashReceived: string | null;
@@ -69,6 +72,7 @@ export type PendingSaleItem = {
 export type PendingSale = {
   id: string;
   receiptNumber: string;
+  tableNumber: number | null;
   sellerName: string;
   totalAmount: string;
   createdAt: string;

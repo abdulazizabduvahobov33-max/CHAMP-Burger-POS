@@ -124,7 +124,14 @@ function PendingOrderRow({
     <div className="animate-fade-in rounded-xl border border-ink-line bg-ink-soft p-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{sale.sellerName}</p>
+          <div className="flex items-center gap-2">
+            {sale.tableNumber !== null && (
+              <span className="shrink-0 rounded-lg bg-champ/15 px-2 py-0.5 text-sm font-extrabold text-champ">
+                {t("table.numberShort", { number: sale.tableNumber })}
+              </span>
+            )}
+            <p className="truncate text-sm font-semibold text-white">{sale.sellerName}</p>
+          </div>
           <p className="flex items-center gap-1 text-xs text-white/40">
             <Clock className="h-3 w-3" />
             {formatTime(sale.createdAt)} · №{sale.receiptNumber}

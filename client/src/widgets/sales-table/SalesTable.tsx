@@ -75,6 +75,7 @@ export function SalesTable({ filter }: { filter: DateFilter }) {
               <thead className="text-xs uppercase tracking-wide text-white/40">
                 <tr>
                   <th className="px-6 py-3 font-medium">{t("sale.columns.number")}</th>
+                  <th className="px-6 py-3 font-medium">{t("sale.columns.table")}</th>
                   <th className="px-6 py-3 font-medium">{t("sale.columns.date")}</th>
                   <th className="px-6 py-3 font-medium">{t("sale.columns.seller")}</th>
                   <th className="px-6 py-3 font-medium">{t("sale.columns.items")}</th>
@@ -86,6 +87,9 @@ export function SalesTable({ filter }: { filter: DateFilter }) {
                 {data.items.map((sale) => (
                   <tr key={sale.id} className="transition hover:bg-ink-soft/60">
                     <td className="px-6 py-3 font-medium text-white">{sale.receiptNumber}</td>
+                    <td className="px-6 py-3 text-white/60">
+                      {sale.tableNumber !== null ? t("table.numberShort", { number: sale.tableNumber }) : "—"}
+                    </td>
                     <td className="px-6 py-3 text-white/60">{formatDateTime(sale.createdAt)}</td>
                     <td className="px-6 py-3 text-white/70">{sale.sellerName}</td>
                     <td className="px-6 py-3 text-white/60">{sale.itemCount}</td>
@@ -150,7 +154,14 @@ function MobileSaleCard({ sale, onView }: { sale: SaleListItem; onView: () => vo
       className="flex w-full items-center justify-between rounded-xl border border-ink-line bg-ink-soft p-3 text-left"
     >
       <div>
-        <p className="font-medium text-white">{sale.receiptNumber}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-medium text-white">{sale.receiptNumber}</p>
+          {sale.tableNumber !== null && (
+            <span className="rounded-md bg-champ/15 px-1.5 py-0.5 text-[11px] font-bold text-champ">
+              {t("table.numberShort", { number: sale.tableNumber })}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-white/40">
           {formatDateTime(sale.createdAt)} · {sale.sellerName}
         </p>

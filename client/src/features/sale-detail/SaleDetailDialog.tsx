@@ -34,8 +34,13 @@ export function SaleDetailDialog({ saleId, onClose }: SaleDetailDialogProps) {
 
       {sale && (
         <div>
-          <p className="mb-4 text-sm text-white/50">
+          <p className="mb-4 flex flex-wrap items-center gap-x-1.5 text-sm text-white/50">
             {format(new Date(sale.createdAt), "d MMMM yyyy, HH:mm", { locale: dateFnsLocale() })} · {sale.sellerName}
+            {sale.tableNumber !== null && (
+              <span className="rounded-md bg-champ/15 px-1.5 py-0.5 text-xs font-bold text-champ">
+                {t("table.numberShort", { number: sale.tableNumber })}
+              </span>
+            )}
           </p>
 
           <div className="max-h-[50vh] overflow-auto rounded-xl border border-ink-line">

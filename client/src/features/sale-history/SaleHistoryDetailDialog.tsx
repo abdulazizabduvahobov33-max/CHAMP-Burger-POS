@@ -48,9 +48,14 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
       {sale && (
         <div>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-white/50">
-              {format(new Date(sale.createdAt), "d MMMM yyyy, HH:mm", { locale: dateFnsLocale() })}
-            </p>
+            <div>
+              <p className="text-sm text-white/50">
+                {format(new Date(sale.createdAt), "d MMMM yyyy, HH:mm", { locale: dateFnsLocale() })}
+              </p>
+              {sale.tableNumber !== null && (
+                <p className="mt-0.5 text-sm font-bold text-champ">{t("table.numberShort", { number: sale.tableNumber })}</p>
+              )}
+            </div>
             {sale.status === "PENDING" && (
               <span className="shrink-0 rounded-full bg-warn/15 px-2.5 py-1 text-xs font-bold text-warn">
                 {t("sale.statusPending")}

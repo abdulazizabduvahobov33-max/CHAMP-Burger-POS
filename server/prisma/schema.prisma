@@ -75,6 +75,7 @@ model Location {
   sales          Sale[]
   stockMovements StockMovement[]
   aiMessages     AiMessage[]
+  tables         Table[]
 
   @@map("locations")
 }
@@ -172,6 +173,26 @@ model Stock {
 }
 
 // ── Products / menu ──────────────────────────────────────────
+
+// A physical table in the dining room. Deliberately minimal — number + active flag — so the
+// "12 tables today, more later" requirement is satisfied by admins just adding rows, never a
+// code change. Not tied to any notion of an open/closed session yet (a table doesn't "belong" to
+// an order); that's intentionally left for later — a future TableSession-style layer can be added
+// as a purely additive migration on top of this without touching what's here.
+model Table {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  number     Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  sales Sale[]
+
+  @@unique([locationId, number])
+  @@index([locationId])
+  @@map("tables")
+}
 
 model Category {
   id        String   @id @default(cuid())
@@ -289,6 +310,12 @@ model Sale {
   seller       User       @relation(fields: [sellerId], references: [id])
   locationId   String
   location     Location   @relation(fields: [locationId], references: [id])
+  // Which dining table this order was for — null for admin/register sales that aren't tied to a
+  // seated table (takeaway, or the admin ringing something up directly). Required at the
+  // application layer (not the DB) specifically for seller-created orders — see
+  // sale.service.ts's createSale.
+  tableId      String?
+  table        Table?     @relation(fields: [tableId], references: [id])
   totalAmount  Decimal    @default(0) @db.Decimal(14, 2)
   // Cash tendered by the customer and change handed back — both nullable: only cash checkouts
   // (the only payment method the POS supports today) populate them; a future non-cash payment
@@ -313,6 +340,7 @@ model Sale {
   @@index([locationId, createdAt])
   // The admin "pending orders" queue filters by locationId + status=PENDING, oldest first.
   @@index([locationId, status])
+  @@index([tableId])
   @@map("sales")
 }
 

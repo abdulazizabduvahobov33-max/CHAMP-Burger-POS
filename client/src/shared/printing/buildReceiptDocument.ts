@@ -23,6 +23,12 @@ export function buildReceiptDocument(sale: Sale, settings: ReceiptSettings, pape
   if (settings.contact_phone) lines.push({ type: "text", value: settings.contact_phone, align: "center" });
   lines.push({ type: "spacer" });
 
+  // Very deliberately placed before the receipt number, large and impossible to miss — the
+  // whole reason this line exists is so a cashier or waiter never mixes up which table an order
+  // belongs to (see the table-system requirements this shipped with).
+  if (sale.tableNumber !== null) {
+    lines.push({ type: "text", value: i18n.t("table.numberShort", { number: sale.tableNumber }), align: "center", bold: true, size: "large" });
+  }
   lines.push({ type: "text", value: sale.receiptNumber, align: "center", bold: true });
   lines.push({
     type: "text",

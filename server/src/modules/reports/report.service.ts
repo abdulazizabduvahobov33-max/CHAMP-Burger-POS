@@ -78,6 +78,7 @@ export async function listSales(locationId: string, query: SalesListQuery) {
         createdAt: true,
         totalAmount: true,
         seller: { select: { name: true } },
+        table: { select: { number: true } },
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -94,6 +95,7 @@ export async function listSales(locationId: string, query: SalesListQuery) {
     items: sales.map((s) => ({
       id: s.id,
       receiptNumber: shortReceiptNumber(s.id),
+      tableNumber: s.table?.number ?? null,
       createdAt: s.createdAt,
       sellerName: s.seller.name,
       itemCount: s._count.items,
@@ -115,6 +117,7 @@ export async function getSaleDetail(locationId: string, id: string) {
     where: { id, locationId },
     include: {
       seller: { select: { name: true } },
+      table: { select: { number: true } },
       items: { include: { variant: { include: { product: true } } } },
     },
   });
@@ -153,6 +156,7 @@ export async function getSaleDetail(locationId: string, id: string) {
   return {
     id: sale.id,
     receiptNumber: shortReceiptNumber(sale.id),
+    tableNumber: sale.table?.number ?? null,
     createdAt: sale.createdAt,
     sellerName: sale.seller.name,
     totalAmount: sale.totalAmount.toString(),

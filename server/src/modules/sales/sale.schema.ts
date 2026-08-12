@@ -10,6 +10,10 @@ export const createSaleSchema = z.object({
   // Optional: the POS's payment dialog always sends it for a cash checkout, but the field stays
   // optional at the schema level so a future non-cash payment method isn't forced to invent one.
   cashReceived: z.coerce.number().nonnegative("Сумма не может быть отрицательной").optional(),
+  // Optional at the schema level — whether it's actually required depends on the caller's role
+  // (mandatory for a SELLER's order, optional for a SUPER_ADMIN register sale), which the schema
+  // can't know; enforced in sale.service.ts's createSale instead.
+  tableId: z.string().min(1).optional(),
 });
 
 export const listMySalesQuerySchema = z.object({

@@ -8,13 +8,14 @@ import { deductRecipeIngredients } from "../recipes/recipe.service.js";
 import type { SaleItemInput } from "./sale.schema.js";
 
 type SaleWithItems = Prisma.SaleGetPayload<{
-  include: { items: { include: { variant: { include: { product: true } } } } };
+  include: { items: { include: { variant: { include: { product: true } } } }; table: true };
 }>;
 
 function serializeSale(sale: SaleWithItems) {
   return {
     id: sale.id,
     receiptNumber: shortReceiptNumber(sale.id),
+    tableNumber: sale.table?.number ?? null,
     totalAmount: sale.totalAmount.toString(),
     cashReceived: sale.cashReceived?.toString() ?? null,
     changeGiven: sale.changeGiven?.toString() ?? null,
@@ -37,7 +38,7 @@ function serializeSale(sale: SaleWithItems) {
 export async function getSale(id: string) {
   const sale = await prisma.sale.findUniqueOrThrow({
     where: { id },
-    include: { items: { include: { variant: { include: { product: true } } } } },
+    include: { items: { include: { variant: { include: { product: true } } } }, table: true },
   });
   return serializeSale(sale);
 }
@@ -60,6 +61,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
         cashReceived: true,
         changeGiven: true,
         status: true,
+        table: { select: { number: true } },
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -73,6 +75,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
     items: sales.map((s) => ({
       id: s.id,
       receiptNumber: shortReceiptNumber(s.id),
+      tableNumber: s.table?.number ?? null,
       createdAt: s.createdAt,
       totalAmount: s.totalAmount.toString(),
       cashReceived: s.cashReceived?.toString() ?? null,
@@ -89,7 +92,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
 export async function getMySale(id: string, sellerId: string) {
   const sale = await prisma.sale.findUniqueOrThrow({
     where: { id },
-    include: { items: { include: { variant: { include: { product: true } } } } },
+    include: { items: { include: { variant: { include: { product: true } } } }, table: true },
   });
   if (sale.sellerId !== sellerId) {
     // Same 404 as "doesn't exist" (not 403) — a seller has no business learning that a given
@@ -124,7 +127,15 @@ export async function createSale(
   items: SaleItemInput[],
   cashReceived: number | undefined,
   autoAccept: boolean,
+  tableId?: string,
 ) {
+  // A waiter's order must always be tied to a table — the whole point of the table system is
+  // knowing where an order came from — but a register (admin, autoAccept) sale isn't necessarily
+  // seated at anything, so this is only enforced for the non-autoAccept (SELLER) path.
+  if (!autoAccept && !tableId) {
+    throw new AppError(422, "TABLE_REQUIRED", "Выберите стол перед отправкой заказа");
+  }
+
   // Defensive: collapse accidental duplicate variantId entries in one request instead of
   // trusting the client to have already aggregated quantities per line.
   const merged = new Map<string, number>();
@@ -134,6 +145,16 @@ export async function createSale(
   const variantIds = [...merged.keys()];
 
   const saleId = await prisma.$transaction(async (tx) => {
+    if (tableId) {
+      const table = await tx.table.findFirst({ where: { id: tableId, locationId } });
+      if (!table) {
+        throw new AppError(404, "NOT_FOUND", "Стол не найден");
+      }
+      if (!table.isActive) {
+        throw new AppError(422, "TABLE_INACTIVE", "Этот стол отключён");
+      }
+    }
+
     const variants = await tx.productVariant.findMany({
       where: { id: { in: variantIds } },
       include: { product: true },
@@ -157,7 +178,7 @@ export async function createSale(
     }
 
     const sale = await tx.sale.create({
-      data: { sellerId, locationId, totalAmount: 0, status: autoAccept ? "ACCEPTED" : "PENDING" },
+      data: { sellerId, locationId, tableId, totalAmount: 0, status: autoAccept ? "ACCEPTED" : "PENDING" },
     });
 
     let totalAmount = new Prisma.Decimal(0);
@@ -227,6 +248,7 @@ export async function createSale(
         saleId: sale.id,
         sellerId,
         sellerName: seller?.name ?? null,
+        tableNumber: sale.tableNumber,
         receiptNumber: sale.receiptNumber,
         totalAmount: sale.totalAmount,
         itemCount: sale.items.length,
@@ -345,6 +367,7 @@ export async function listPendingSales(locationId: string) {
     where: { locationId, status: "PENDING" },
     include: {
       seller: { select: { name: true } },
+      table: true,
       items: { include: { variant: { include: { product: true } } } },
     },
     orderBy: { createdAt: "asc" },
@@ -353,6 +376,7 @@ export async function listPendingSales(locationId: string) {
   return sales.map((sale) => ({
     id: sale.id,
     receiptNumber: shortReceiptNumber(sale.id),
+    tableNumber: sale.table?.number ?? null,
     sellerName: sale.seller.name,
     totalAmount: sale.totalAmount.toString(),
     createdAt: sale.createdAt,

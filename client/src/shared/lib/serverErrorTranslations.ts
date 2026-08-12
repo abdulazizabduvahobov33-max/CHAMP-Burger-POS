@@ -22,6 +22,7 @@ const UZ_BY_RU: Record<string, string> = {
   "Введите текущий пароль": "Joriy parolni kiriting",
   "Выберите ингредиент": "Ingredientni tanlang",
   "Выберите категорию": "Kategoriyani tanlang",
+  "Выберите стол перед отправкой заказа": "Buyurtmani yuborishdan oldin stolni tanlang",
   "Добавьте хотя бы один вариант цены": "Kamida bitta narx varianti qo'shing",
   "Добавьте хотя бы один ингредиент": "Kamida bitta ingredient qo'shing",
   "Добавьте хотя бы одну позицию": "Kamida bitta pozitsiya qo'shing",
@@ -59,6 +60,7 @@ const UZ_BY_RU: Record<string, string> = {
   "Нельзя удалить: товар используется в продажах": "O'chirib bo'lmaydi: mahsulot sotuvlarda ishlatilgan",
   "Нельзя удалить: у пользователя есть история операций. Деактивируйте его вместо удаления":
     "O'chirib bo'lmaydi: foydalanuvchida amaliyotlar tarixi bor. O'chirish o'rniga uni faolsizlantiring",
+  "Нельзя удалить: за этим столом появились заказы": "O'chirib bo'lmaydi: bu stolda buyurtmalar paydo bo'ldi",
   "Один из товаров в корзине не найден": "Savatdagi mahsulotlardan biri topilmadi",
   "Один или несколько ингредиентов не найдены": "Bir yoki bir nechta ingredient topilmadi",
   "Полученная сумма меньше суммы заказа": "Qabul qilingan summa buyurtma summasidan kam",
@@ -72,9 +74,12 @@ const UZ_BY_RU: Record<string, string> = {
   "Слишком много попыток входа. Попробуйте позже.": "Kirish urinishlari juda ko'p. Keyinroq urinib ko'ring.",
   "Слишком много сообщений. Подождите немного.": "Xabarlar juda ko'p. Bir oz kuting.",
   "Сообщение слишком длинное": "Xabar juda uzun",
+  "Стол не найден": "Stol topilmadi",
+  "Стол с таким номером уже существует": "Bunday raqamli stol allaqachon mavjud",
   "Сумма не может быть отрицательной": "Summa manfiy bo'lishi mumkin emas",
   "Товар не найден": "Mahsulot topilmadi",
   "Требуется авторизация": "Avtorizatsiya talab qilinadi",
+  "Этот стол отключён": "Bu stol o'chirilgan",
   "Укажите валюту": "Valyutani kiriting",
   "Укажите название варианта": "Variant nomini kiriting",
   "Укажите начало и конец периода": "Davr boshi va oxirini ko'rsating",
@@ -92,6 +97,10 @@ const DYNAMIC_PATTERNS: { pattern: RegExp; translate: (m: RegExpMatchArray) => s
   {
     pattern: /^Нельзя удалить: в категории (\d+) товар\(ов\)$/,
     translate: (m) => `O'chirib bo'lmaydi: kategoriyada ${m[1]} ta mahsulot bor`,
+  },
+  {
+    pattern: /^Нельзя удалить: за этим столом есть история заказов \((\d+)\)$/,
+    translate: (m) => `O'chirib bo'lmaydi: bu stolda buyurtmalar tarixi bor (${m[1]})`,
   },
   {
     pattern: /^Недостаточно на складе: доступно (.+)$/,

@@ -24,6 +24,7 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
   const { t } = useTranslation();
   const lines = useCartStore((s) => s.lines);
   const clear = useCartStore((s) => s.clear);
+  const tableId = useCartStore((s) => s.tableId);
   const total = cartTotal(lines);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -59,7 +60,11 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
     setCheckoutError(null);
     setLastReceiptTotal(null);
     createSale.mutate(
-      { items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), cashReceived },
+      {
+        items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+        cashReceived,
+        tableId: tableId ?? undefined,
+      },
       {
         onSuccess: (sale) => {
           clear();

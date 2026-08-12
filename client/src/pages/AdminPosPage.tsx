@@ -1,16 +1,21 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { useTables } from "@/entities/table/api";
 import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { Dialog } from "@/shared/ui/Dialog";
 import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
 import { LanguageSwitcher } from "@/shared/ui/LanguageSwitcher";
 import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { BrandMark } from "@/shared/ui/BrandMark";
 import { useAuthStore } from "@/shared/stores/authStore";
+import { useCartStore } from "@/shared/stores/cartStore";
 import { PosCart } from "@/widgets/pos-cart/PosCart";
 import { PosMenu } from "@/widgets/pos-menu/PosMenu";
+import { TablePicker } from "@/widgets/table-picker/TablePicker";
 
 // The register screen: an admin at the till builds an order and hits "Принять заказ" (mode
 // "accept" — auto-accepted, stock deducted and receipt printed immediately, no dialog) instead of
@@ -20,6 +25,11 @@ import { PosMenu } from "@/widgets/pos-menu/PosMenu";
 export default function AdminPosPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const tableId = useCartStore((s) => s.tableId);
+  const setTable = useCartStore((s) => s.setTable);
+  const { data: tables } = useTables();
+  const selectedTable = tables?.find((table) => table.id === tableId) ?? null;
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden [padding-left:env(safe-area-inset-left)] [padding-right:env(safe-area-inset-right)]">
@@ -34,6 +44,18 @@ export default function AdminPosPage() {
           </Link>
           <BrandMark size={28} />
           <h1 className="text-lg font-bold tracking-tight sm:text-xl">{t("pos.registerTitle")}</h1>
+          {/* Optional here — unlike the waiter's mandatory gate, a register sale isn't
+              necessarily tied to a seated table (takeaway, walk-up). */}
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold transition ${
+              selectedTable ? "bg-champ/15 text-champ hover:bg-champ/25" : "border border-ink-line text-white/40 hover:text-white"
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            {selectedTable ? t("table.numberShort", { number: selectedTable.number }) : t("table.pickerTitle")}
+          </button>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="hidden text-sm text-white/50 sm:inline">{user?.name}</span>
@@ -52,6 +74,28 @@ export default function AdminPosPage() {
         </div>
         <PosCart mode="accept" />
       </div>
+
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} title={t("table.pickerTitle")} widthClassName="max-w-lg">
+        <TablePicker
+          selectedTableId={tableId}
+          onSelect={(id) => {
+            setTable(id);
+            setPickerOpen(false);
+          }}
+        />
+        {selectedTable && (
+          <button
+            type="button"
+            onClick={() => {
+              setTable(null);
+              setPickerOpen(false);
+            }}
+            className="mt-4 w-full rounded-xl border border-ink-line py-2.5 text-sm font-medium text-white/60 transition hover:text-white"
+          >
+            {t("table.clearSelection")}
+          </button>
+        )}
+      </Dialog>
     </div>
   );
 }

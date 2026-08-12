@@ -22,6 +22,7 @@ export type OrderNotification = NotificationEvent & {
     saleId: string;
     sellerId: string;
     sellerName: string | null;
+    tableNumber: number | null;
     receiptNumber: string;
     totalAmount: string;
     itemCount: number;

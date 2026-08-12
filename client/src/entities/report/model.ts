@@ -97,6 +97,7 @@ export type IngredientAnalyticsQuery = {
 export type SaleListItem = {
   id: string;
   receiptNumber: string;
+  tableNumber: number | null;
   createdAt: string;
   sellerName: string;
   itemCount: number;
@@ -134,6 +135,7 @@ export type SaleDetailItem = {
 export type SaleDetail = {
   id: string;
   receiptNumber: string;
+  tableNumber: number | null;
   createdAt: string;
   sellerName: string;
   totalAmount: string;

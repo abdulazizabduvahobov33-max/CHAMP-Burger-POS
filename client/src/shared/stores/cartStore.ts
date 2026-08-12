@@ -15,6 +15,11 @@ export type CartLine = {
 
 type CartState = {
   lines: CartLine[];
+  /** The table this in-progress order is for — set by the waiter's mandatory table-picker gate
+   * (SellerPosPage) or optionally by the admin's register selector (AdminPosPage). Lives here,
+   * not on each CartLine, since it's a property of the whole order, not any one item. */
+  tableId: string | null;
+  setTable: (tableId: string | null) => void;
   addItem: (item: Omit<CartLine, "quantity">) => void;
   incrementQuantity: (variantId: string) => void;
   decrementQuantity: (variantId: string) => void;
@@ -33,6 +38,9 @@ type CartState = {
  */
 export const useCartStore = create<CartState>((set) => ({
   lines: [],
+  tableId: null,
+
+  setTable: (tableId) => set({ tableId }),
 
   addItem: (item) =>
     set((state) => {
@@ -70,5 +78,5 @@ export const useCartStore = create<CartState>((set) => ({
 
   removeItem: (variantId) => set((state) => ({ lines: state.lines.filter((l) => l.variantId !== variantId) })),
 
-  clear: () => set({ lines: [] }),
+  clear: () => set({ lines: [], tableId: null }),
 }));

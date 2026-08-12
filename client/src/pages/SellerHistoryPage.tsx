@@ -76,7 +76,14 @@ export default function SellerHistoryPage() {
                       <Receipt className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="font-semibold text-white">{sale.receiptNumber}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-white">{sale.receiptNumber}</p>
+                        {sale.tableNumber !== null && (
+                          <span className="rounded-md bg-champ/15 px-1.5 py-0.5 text-[11px] font-bold text-champ">
+                            {t("table.numberShort", { number: sale.tableNumber })}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-white/40">
                         {format(new Date(sale.createdAt), "d MMM, HH:mm", { locale: dateFnsLocale() })} ·{" "}
                         {t("pos.itemsCount", { count: sale.itemCount })}

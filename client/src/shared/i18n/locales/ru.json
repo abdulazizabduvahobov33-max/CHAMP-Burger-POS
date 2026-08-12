@@ -65,6 +65,7 @@
     "role": "Роль",
     "sections": {
       "register": { "title": "Оформление заказа", "subtitle": "Касса: приём заказов и оплата" },
+      "tables": { "title": "Столы", "subtitle": "Управление столами зала" },
       "reports": { "title": "Отчёты", "subtitle": "Аналитика продаж и статистика" },
       "products": { "title": "Товары", "subtitle": "Управление меню и категориями" },
       "warehouse": { "title": "Склад", "subtitle": "Справочник ингредиентов" },
@@ -353,6 +354,7 @@
   },
   "notifications": {
     "newOrderTitle": "Новый заказ",
+    "waiterLabel": "Официант: {{name}}",
     "toast": {
       "orderAccepted": "Заказ №{{number}} принят",
       "orderRejected": "Заказ №{{number}} отклонён"
@@ -387,6 +389,7 @@
     "total": "Итого",
     "columns": {
       "number": "№",
+      "table": "Стол",
       "date": "Дата",
       "seller": "Продавец",
       "items": "Товаров",
@@ -502,6 +505,27 @@
     "deleteFailed": "Не удалось удалить категорию",
     "renameFailed": "Не удалось переименовать",
     "hasProducts": "В категории есть товары"
+  },
+  "table": {
+    "title": "Столы",
+    "add": "Добавить стол",
+    "createSuccess": "Стол №{{number}} добавлен",
+    "createFailed": "Не удалось добавить стол",
+    "renameSuccess": "Стол переименован",
+    "renameFailed": "Не удалось переименовать стол",
+    "statusChangeFailed": "Не удалось изменить статус стола",
+    "deleteTitle": "Удалить стол?",
+    "deleteDescription": "Стол №{{number}} будет удалён без возможности восстановления.",
+    "deleteSuccess": "Стол удалён",
+    "deleteFailed": "Не удалось удалить стол",
+    "emptyTitle": "Столов пока нет",
+    "emptyDescription": "Добавьте первый стол — официанты сразу смогут выбирать его при оформлении заказа",
+    "numberShort": "Стол №{{number}}",
+    "numberLabel": "Стол",
+    "pickerTitle": "Выберите стол",
+    "pickerEmptyTitle": "Нет доступных столов",
+    "pickerEmptyDescription": "Администратор ещё не добавил ни одного стола в разделе «Столы»",
+    "clearSelection": "Убрать стол"
   },
   "supplier": {
     "title": "Поставщики",

@@ -105,7 +105,7 @@ function OrderNotificationCard({
   onReject: () => void;
 }) {
   const { t } = useTranslation();
-  const { sellerName, receiptNumber, totalAmount, itemCount } = notification.data;
+  const { sellerName, tableNumber, receiptNumber, totalAmount, itemCount } = notification.data;
 
   return (
     <div
@@ -118,13 +118,22 @@ function OrderNotificationCard({
           <ShoppingBag className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-white">{t("notifications.newOrderTitle")}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-white/50">{t("notifications.newOrderTitle")}</p>
+          {/* Table number is the single most important thing on this card — it's how the
+              cashier avoids mixing up which order is which — so it renders largest, before
+              anything else, per the client's explicit "очень важно" requirement. */}
+          {tableNumber !== null && (
+            <p className="truncate text-xl font-extrabold text-champ">{t("table.numberShort", { number: tableNumber })}</p>
+          )}
           <p className="truncate text-xs text-white/50">
-            {sellerName ?? t("pos.pending.title")} · №{receiptNumber} · {t("pos.itemsCount", { count: itemCount })}
+            {sellerName ? t("notifications.waiterLabel", { name: sellerName }) : t("pos.pending.title")}
           </p>
         </div>
         <span className="shrink-0 text-base font-extrabold text-champ">{formatPrice(totalAmount)}</span>
       </div>
+      <p className="mt-2 truncate text-xs text-white/40">
+        №{receiptNumber} · {t("pos.itemsCount", { count: itemCount })}
+      </p>
       <div className="mt-3 flex gap-2">
         <button
           type="button"

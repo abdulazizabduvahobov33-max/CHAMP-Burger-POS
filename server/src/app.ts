@@ -13,6 +13,7 @@ import { authorize } from "./middleware/authorize.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import ingredientRoutes from "./modules/ingredients/ingredient.routes.js";
 import categoryRoutes from "./modules/categories/category.routes.js";
+import tableRoutes from "./modules/tables/table.routes.js";
 import productRoutes from "./modules/products/product.routes.js";
 import uploadRoutes from "./modules/uploads/upload.routes.js";
 import recipeRoutes from "./modules/recipes/recipe.routes.js";
@@ -118,6 +119,9 @@ export function createApp() {
   // Categories/products: readable by both roles (POS needs the menu), writes are gated
   // per-route inside each router — SUPER_ADMIN only. See category.routes.ts / product.routes.ts.
   app.use("/api/categories", authenticate, categoryRoutes);
+  // Tables: same open-read/gated-write shape as categories — the waiter's table picker and the
+  // cashier's notification/order views all need the list, only SUPER_ADMIN manages it.
+  app.use("/api/tables", authenticate, tableRoutes);
   app.use("/api/products", authenticate, productRoutes);
   app.use("/api/uploads", authenticate, authorize("SUPER_ADMIN"), uploadRoutes);
   app.use("/api/recipes", authenticate, authorize("SUPER_ADMIN"), recipeRoutes);
