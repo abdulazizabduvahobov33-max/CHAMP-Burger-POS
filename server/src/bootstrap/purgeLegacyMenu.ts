@@ -1,5 +1,4 @@
 import { prisma } from "../config/db.js";
-import { clearWorkingData } from "../modules/settings/settings.service.js";
 import { deleteUploadedFile } from "../shared/utils/uploads.js";
 
 // The full menu/category list from the PREVIOUS client (CHAMP Burger) — frozen here as plain
@@ -21,6 +20,27 @@ const NEW_CAFE_NAME = "KRUNCH";
 // marker), and it can never fire twice on one that did.
 const MARKER_KEY = "legacy_menu_purged";
 
+/**
+ * Wipes every transactional row (sales, purchases, stock movements, price history, backup
+ * records) so the legacy CHAMP-era ProductVariants below can actually be deleted — SaleItem etc.
+ * have a required, non-cascading FK to the variant they reference. Safe ONLY in this specific
+ * bootstrap context: it runs once, before this deployment's real (new-menu) data has ever had a
+ * chance to exist, so there is nothing real to lose. Not exposed anywhere else in the app —
+ * there is no general-purpose "clear data" tool in the product; see docs/git history for the
+ * one that used to live in Settings, removed once the app went into real commercial use.
+ */
+async function wipeLegacyTransactionalData(): Promise<void> {
+  await prisma.saleItem.deleteMany({});
+  await prisma.sale.deleteMany({});
+  await prisma.purchaseItem.deleteMany({});
+  await prisma.purchase.deleteMany({});
+  await prisma.stockMovement.deleteMany({});
+  await prisma.priceHistory.deleteMany({});
+  await prisma.backup.deleteMany({});
+  await prisma.stock.updateMany({ data: { quantity: 0 } });
+  await prisma.ingredient.updateMany({ data: { lastUnitCost: 0, avgUnitCost: 0 } });
+}
+
 export async function purgeLegacyMenu(): Promise<void> {
   try {
     if (await prisma.setting.findUnique({ where: { key: MARKER_KEY } })) return;
@@ -35,11 +55,9 @@ export async function purgeLegacyMenu(): Promise<void> {
 
       // Every sale in a DB that only ever had the old menu is necessarily built entirely out of
       // old-menu items — there's no KRUNCH product for a sale to reference yet at this point in
-      // bootstrap. clearWorkingData() (already used by Settings' "Очистить тестовые данные")
-      // wipes SaleItem/Sale/PurchaseItem/Purchase/StockMovement/PriceHistory/Backup, which is
-      // exactly what needs to be gone before a ProductVariant with sale history can be deleted —
-      // reusing it here instead of re-deriving the same FK-safe deletion order.
-      await clearWorkingData();
+      // bootstrap, so it's always safe to clear everything transactional before deleting the
+      // legacy ProductVariants below (SaleItem etc. would otherwise block that delete).
+      await wipeLegacyTransactionalData();
 
       // ProductVariant -> Recipe and ProductVariant -> PriceHistory both cascade in the schema,
       // so deleting the variants (then the products) is enough; SaleItem is already gone above.

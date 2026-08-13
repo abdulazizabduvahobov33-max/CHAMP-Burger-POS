@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { prisma } from "../../config/db.js";
 import { env } from "../../config/env.js";
-import { AppError } from "../../middleware/error.js";
 import { deleteUploadedFile } from "../../shared/utils/uploads.js";
 import type { UpdateSettingsInput } from "./settings.schema.js";
 
@@ -31,9 +30,9 @@ export async function getCompanySettings(): Promise<Record<string, string>> {
 
 // The fields needed to print a receipt (company name, address, phone, header/footer text) —
 // a narrow, deliberately public-to-any-authenticated-user subset of getCompanySettings(), which
-// is otherwise SUPER_ADMIN-only (it also carries tax_percent, currency, logo_url, and is the
-// door to the danger-zone endpoints). A SELLER prints receipts at checkout and has no admin
-// access, so this is the one piece of "settings" that has to be readable by both roles.
+// is otherwise SUPER_ADMIN-only (it also carries tax_percent, currency, logo_url). A SELLER
+// prints receipts at checkout and has no admin access, so this is the one piece of "settings"
+// that has to be readable by both roles.
 const RECEIPT_FIELDS = ["cafe_name", "address", "contact_phone", "receipt_header", "receipt_footer"] as const;
 
 export async function getReceiptSettings(): Promise<Pick<Record<string, string>, (typeof RECEIPT_FIELDS)[number]>> {
@@ -94,73 +93,11 @@ function readJsonVersion(relativePath: string): string {
   }
 }
 
-/**
- * "Clear working data" — wipes transactional/operational history (sales, purchases, stock
- * movements, price history, backup records) and zeroes out live stock quantities + ingredient
- * cost rollups, so the app is ready for a real opening day without losing the catalog itself.
- *
- * Deliberately NOT touched: User, Setting, Location, Category, Product/ProductVariant (photos
- * live on Product.imageUrl), Recipe, Supplier, Ingredient (only its cost fields reset) — these
- * are the "structure" of the business, not a transaction log, and wiping them would mean
- * re-building the whole menu/warehouse from scratch.
- *
- * Deletion order mirrors prisma/reset-demo-data.ts (children before parents on the FK graph).
- *
- * PERMANENTLY refuses to run once a single ACCEPTED (finalized + paid) sale exists anywhere in
- * the system — this is a pre-launch cleanup tool, not a way to erase real business history. A
- * PENDING order was never paid and a REJECTED one was explicitly declined, so those aren't
- * "оформленные и оплаченные" and are still safe to clear as test clutter; ACCEPTED is the one
- * status that means real money and stock moved, and once that's happened this function (and
- * every other danger-zone action it's composed into, including the one-time legacy-menu
- * bootstrap purge) becomes a permanent no-op rather than a risk — no amount of confirmation,
- * by anyone with SUPER_ADMIN access, can ever delete a finalized sale again.
- */
-export async function clearWorkingData() {
-  return prisma.$transaction(async (tx) => {
-    const acceptedSales = await tx.sale.count({ where: { status: "ACCEPTED" } });
-    if (acceptedSales > 0) {
-      throw new AppError(
-        409,
-        "LIVE_SALES_EXIST",
-        "В системе есть оформленные и оплаченные продажи — очистка данных недоступна. История реальных продаж защищена от удаления.",
-      );
-    }
-
-    const saleItems = await tx.saleItem.deleteMany({});
-    const sales = await tx.sale.deleteMany({});
-
-    const purchaseItems = await tx.purchaseItem.deleteMany({});
-    const purchases = await tx.purchase.deleteMany({});
-
-    const stockMovements = await tx.stockMovement.deleteMany({});
-    const priceHistory = await tx.priceHistory.deleteMany({});
-    const backups = await tx.backup.deleteMany({});
-
-    const stockReset = await tx.stock.updateMany({ data: { quantity: 0 } });
-    const ingredientCostReset = await tx.ingredient.updateMany({ data: { lastUnitCost: 0, avgUnitCost: 0 } });
-
-    return {
-      saleItems: saleItems.count,
-      sales: sales.count,
-      purchaseItems: purchaseItems.count,
-      purchases: purchases.count,
-      stockMovements: stockMovements.count,
-      priceHistory: priceHistory.count,
-      backups: backups.count,
-      stockRowsReset: stockReset.count,
-      ingredientsCostReset: ingredientCostReset.count,
-    };
-  });
-}
-
 export async function getSystemInfo() {
-  const [userCount, productCount, saleCount, acceptedSaleCount, purchaseCount, ingredientCount, pgVersion] = await Promise.all([
+  const [userCount, productCount, saleCount, purchaseCount, ingredientCount, pgVersion] = await Promise.all([
     prisma.user.count(),
     prisma.product.count(),
     prisma.sale.count(),
-    // Drives the client's danger-zone lockout (DangerZoneSection) — mirrors the guard inside
-    // clearWorkingData() exactly, so the UI never shows an action the server would refuse anyway.
-    prisma.sale.count({ where: { status: "ACCEPTED" } }),
     prisma.purchase.count(),
     prisma.ingredient.count(),
     prisma.$queryRaw<{ version: string }[]>`SELECT version()`,
@@ -178,6 +115,5 @@ export async function getSystemInfo() {
       purchases: purchaseCount,
       ingredients: ingredientCount,
     },
-    hasAcceptedSales: acceptedSaleCount > 0,
   };
 }

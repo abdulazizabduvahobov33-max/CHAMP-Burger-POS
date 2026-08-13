@@ -38,8 +38,6 @@ const UZ_BY_RU: Record<string, string> = {
   "Количество должно быть больше нуля": "Miqdor noldan katta bo'lishi kerak",
   "Количество упаковок должно быть больше нуля": "Qadoqlar soni noldan katta bo'lishi kerak",
   "Корзина пуста": "Savat bo'sh",
-  "В системе есть оформленные и оплаченные продажи — очистка данных недоступна. История реальных продаж защищена от удаления.":
-    "Tizimda rasmiylashtirilgan va to'langan sotuvlar bor — ma'lumotlarni tozalash mavjud emas. Haqiqiy sotuvlar tarixi o'chirishdan himoyalangan.",
   "Минимальный остаток не может быть отрицательным": "Minimal qoldiq manfiy bo'lishi mumkin emas",
   "Минимум 3 символа": "Kamida 3 ta belgi",
   "Минимум 6 символов": "Kamida 6 ta belgi",

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import * as settingsService from "./settings.service.js";
-import { clearDataSchema, updateSettingsSchema } from "./settings.schema.js";
+import { updateSettingsSchema } from "./settings.schema.js";
 
 export async function get(_req: Request, res: Response) {
   const [settings, security] = [await settingsService.getCompanySettings(), settingsService.getSecurityInfo()];
@@ -23,10 +23,4 @@ export async function update(req: Request, res: Response) {
 export async function systemInfo(_req: Request, res: Response) {
   const info = await settingsService.getSystemInfo();
   res.json(info);
-}
-
-export async function clearData(req: Request, res: Response) {
-  clearDataSchema.parse(req.body);
-  const summary = await settingsService.clearWorkingData();
-  res.json({ summary });
 }

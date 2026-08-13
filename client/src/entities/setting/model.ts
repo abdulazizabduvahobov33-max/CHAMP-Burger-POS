@@ -36,17 +36,4 @@ export type SystemInfo = {
     purchases: number;
     ingredients: number;
   };
-  hasAcceptedSales: boolean;
-};
-
-export type ClearDataSummary = {
-  saleItems: number;
-  sales: number;
-  purchaseItems: number;
-  purchases: number;
-  stockMovements: number;
-  priceHistory: number;
-  backups: number;
-  stockRowsReset: number;
-  ingredientsCostReset: number;
 };

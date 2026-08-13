@@ -8,6 +8,5 @@ const router = Router();
 router.get("/", asyncHandler(controller.get));
 router.patch("/", asyncHandler(controller.update));
 router.get("/system-info", asyncHandler(controller.systemInfo));
-router.post("/clear-data", asyncHandler(controller.clearData));
 
 export default router;

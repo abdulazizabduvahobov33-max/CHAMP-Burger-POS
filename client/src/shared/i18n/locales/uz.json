@@ -484,15 +484,7 @@
     "productsCount": "Mahsulotlar",
     "salesCount": "Sotuvlar",
     "purchasesCount": "Xaridlar",
-    "ingredientsCount": "Ingredientlar",
-    "dangerZone": "Xavfli zona",
-    "clearDataDescription": "Sotuvlar, xaridlar, ombor harakatlari va tahlilni tozalash — masalan, sinovdan keyin haqiqiy ishni boshlashdan oldin. Mahsulotlar, kategoriyalar, retseptlar, ingredientlar, yetkazib beruvchilar, fotolar va foydalanuvchilar o'chirilmaydi.",
-    "clearDataButton": "Test ma'lumotlarini tozalash",
-    "clearDataConfirmTitle": "Test ma'lumotlarini tozalash?",
-    "clearDataConfirmDescription": "Barcha sotuvlar, xaridlar va ombor harakatlari butunlay o'chiriladi, ombordagi qoldiqlar nolga tushiriladi. Mahsulotlar, kategoriyalar, retseptlar, ingredientlar, yetkazib beruvchilar, fotolar va foydalanuvchilar o'zgarishsiz qoladi. Amalni bekor qilib bo'lmaydi.",
-    "clearDataSuccess": "Tayyor: o'chirildi — sotuvlar: {{sales}}, xaridlar: {{purchases}}, ombor harakatlari: {{movements}}.",
-    "clearDataFailed": "Ma'lumotlarni tozalab bo'lmadi",
-    "clearDataLocked": "Funksiya o'chirilgan: tizimda rasmiylashtirilgan va to'langan sotuvlar bor. Haqiqiy sotuvlar tarixi butunlay o'chirishdan himoyalangan."
+    "ingredientsCount": "Ingredientlar"
   },
   "category": {
     "title": "Mahsulot kategoriyalari",

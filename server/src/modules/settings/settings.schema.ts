@@ -18,12 +18,3 @@ export const updateSettingsSchema = z
   .partial();
 
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
-
-// Defense in depth alongside the frontend's ConfirmDialog — a bare POST with no body (e.g.
-// a stray script, a replayed request) can't trigger the wipe; the caller must explicitly
-// assert `confirm: true`.
-export const clearDataSchema = z.object({
-  confirm: z.literal(true, { errorMap: () => ({ message: "confirm must be true" }) }),
-});
-
-export type ClearDataInput = z.infer<typeof clearDataSchema>;

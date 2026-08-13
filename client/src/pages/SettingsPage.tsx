@@ -1,10 +1,10 @@
 ﻿import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ImagePlus, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ImagePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { useClearData, useSettings, useSystemInfo, useUpdateSettings } from "@/entities/setting/api";
-import type { ClearDataSummary, CompanySettings } from "@/entities/setting/model";
+import { useSettings, useSystemInfo, useUpdateSettings } from "@/entities/setting/api";
+import type { CompanySettings } from "@/entities/setting/model";
 import { ChangePasswordButton } from "@/features/change-password/ChangePasswordButton";
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { HeaderOverflowMenu } from "@/shared/ui/HeaderOverflowMenu";
@@ -19,7 +19,6 @@ import { PrinterSetupWizard } from "@/widgets/printer-wizard/PrinterSetupWizard"
 import { useNotificationSoundSettingsStore } from "@/shared/notifications/notificationSoundSettingsStore";
 import { playOrderChime } from "@/shared/notifications/sound";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
-import { useAuthStore } from "@/shared/stores/authStore";
 import { toast } from "@/shared/stores/toastStore";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { BrandMark } from "@/shared/ui/BrandMark";
@@ -297,7 +296,6 @@ export default function SettingsPage() {
         <NotificationSoundSection />
         <SecuritySection expiry={data?.security} />
         <SystemInfoSection />
-        <DangerZoneSection />
       </div>
     </div>
   );
@@ -529,101 +527,6 @@ function SystemInfoSection() {
   );
 }
 
-/** SUPER_ADMIN-only вЂ” the whole /admin/settings route is already role-gated (see
- * app/routes.tsx), but this section is destructive enough to double-check locally too, in
- * case this component is ever reused somewhere less strictly guarded. */
-function DangerZoneSection() {
-  const { t } = useTranslation();
-  const role = useAuthStore((s) => s.user?.role);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [result, setResult] = useState<ClearDataSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const clearDataMutation = useClearData();
-  // Same source of truth the server itself checks inside clearWorkingData() — once a single
-  // ACCEPTED sale exists, this becomes permanently locked (see settings.service.ts). Shown here
-  // proactively so the admin sees *why* it's gone, instead of a confirm dialog that just fails.
-  const { data: systemInfo } = useSystemInfo();
-  const locked = systemInfo?.hasAcceptedSales ?? false;
-
-  if (role !== "SUPER_ADMIN") return null;
-
-  return (
-    <section className="rounded-card border border-danger/30 bg-ink-card p-6 shadow-card">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-danger-soft">
-        <AlertTriangle className="h-4 w-4" />
-        {t("settings.dangerZone")}
-      </h2>
-      <p className="mb-4 text-xs text-white/40">{t("settings.clearDataDescription")}</p>
-
-      {locked ? (
-        <div className="flex items-start gap-2.5 rounded-xl border border-ink-line bg-ink-soft px-4 py-3 text-sm text-white/50">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-          <span>{t("settings.clearDataLocked")}</span>
-        </div>
-      ) : (
-        <>
-          {result && (
-            <p className="mb-4 text-sm text-success">
-              {t("settings.clearDataSuccess", {
-                sales: result.sales,
-                purchases: result.purchases,
-                movements: result.stockMovements,
-              })}
-            </p>
-          )}
-          {error && (
-            <div role="alert" className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger-soft">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              setResult(null);
-              setError(null);
-              setConfirmOpen(true);
-            }}
-            className="rounded-xl border border-danger/50 px-4 py-2 text-sm font-bold text-danger-soft transition hover:bg-danger/10"
-          >
-            {t("settings.clearDataButton")}
-          </button>
-        </>
-      )}
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title={t("settings.clearDataConfirmTitle")}
-        description={t("settings.clearDataConfirmDescription")}
-        confirmLabel={t("settings.clearDataButton")}
-        danger
-        pending={clearDataMutation.isPending}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={() => {
-          clearDataMutation.mutate(undefined, {
-            onSuccess: (summary) => {
-              setResult(summary);
-              setConfirmOpen(false);
-              toast.success(
-                t("settings.clearDataSuccess", {
-                  sales: summary.sales,
-                  purchases: summary.purchases,
-                  movements: summary.stockMovements,
-                }),
-              );
-            },
-            onError: (err) => {
-              const message = getErrorMessage(err, t("settings.clearDataFailed"));
-              setError(message);
-              setConfirmOpen(false);
-              toast.error(message);
-            },
-          });
-        }}
-      />
-    </section>
-  );
-}
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
