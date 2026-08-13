@@ -22,7 +22,7 @@ export type SaleItemResult = {
   subtotal: string;
 };
 
-export type SaleStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+export type SaleStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED";
 
 export type Sale = {
   id: string;

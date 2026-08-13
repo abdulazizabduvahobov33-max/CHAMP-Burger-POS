@@ -5,10 +5,24 @@ import { FullScreenSpinner } from "@/shared/ui/FullScreenSpinner";
 import { useAuthStore, type Role } from "@/shared/stores/authStore";
 
 export function roleHome(role: Role): string {
-  return role === "SUPER_ADMIN" ? "/admin" : "/pos";
+  if (role === "SUPER_ADMIN") return "/admin";
+  if (role === "OWNER") return "/owner";
+  return "/pos";
 }
 
-export function ProtectedRoute({ roles, children }: { roles: Role[]; children: ReactNode }) {
+export function ProtectedRoute({
+  roles,
+  children,
+  loginPath = "/login",
+}: {
+  roles: Role[];
+  children: ReactNode;
+  /** Where an unauthenticated visitor is sent — the owner panel uses its own "/owner/login"
+   * instead of the normal cashier/waiter login page, so someone landing on an owner-only URL
+   * (bookmarked, guessed, ...) without a session sees the locked owner gate, not the regular
+   * login form. See routes.tsx's "/owner" route. */
+  loginPath?: string;
+}) {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
@@ -18,7 +32,7 @@ export function ProtectedRoute({ roles, children }: { roles: Role[]; children: R
   }
 
   if (status !== "authenticated" || !user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
 
   if (!roles.includes(user.role)) {

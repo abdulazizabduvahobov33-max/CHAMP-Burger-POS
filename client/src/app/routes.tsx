@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { LoginPage } from "@/features/auth/LoginPage";
+import { OwnerLoginPage } from "@/features/auth/OwnerLoginPage";
 import { ProtectedRoute, roleHome } from "@/features/auth/ProtectedRoute";
 import { FullScreenSpinner } from "@/shared/ui/FullScreenSpinner";
 import { PageTransition } from "@/shared/ui/PageTransition";
@@ -21,6 +22,7 @@ const SellerPosPage = lazy(() => import("@/pages/SellerPosPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const StockIntakePage = lazy(() => import("@/pages/StockIntakePage"));
 const TablesPage = lazy(() => import("@/pages/TablesPage"));
+const OwnerDashboardPage = lazy(() => import("@/pages/OwnerDashboardPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const WarehousePage = lazy(() => import("@/pages/WarehousePage"));
 
@@ -41,6 +43,19 @@ export function AppRoutes() {
       <Suspense fallback={<FullScreenSpinner />}>
       <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Deliberately not linked from anywhere in the normal admin/waiter UI — see
+          OwnerLoginPage.tsx and ProtectedRoute's loginPath prop for why this is a fully separate
+          gate, not just a role check layered on the regular /login. */}
+      <Route path="/owner/login" element={<OwnerLoginPage />} />
+
+      <Route
+        path="/owner"
+        element={
+          <ProtectedRoute roles={["OWNER"]} loginPath="/owner/login">
+            <OwnerDashboardPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/admin"

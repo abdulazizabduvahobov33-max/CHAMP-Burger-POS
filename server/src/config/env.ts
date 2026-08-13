@@ -59,4 +59,13 @@ export const env = {
     openaiApiKey: process.env.OPENAI_API_KEY,
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   },
+
+  // Deliberately no fallback defaults (unlike SEED_ADMIN_*/SEED_SELLER_* below) — the owner
+  // account exists specifically so nobody who can read this codebase (or its public defaults)
+  // can log into it. Both must be set, in the server's own environment config (never reachable
+  // or settable from the app itself), before bootstrap/ensureOwnerExists.ts creates the account.
+  owner: {
+    login: process.env.OWNER_LOGIN,
+    password: process.env.OWNER_PASSWORD,
+  },
 } as const;

@@ -66,6 +66,11 @@ export function SaleHistoryDetailDialog({ saleId, onClose }: SaleHistoryDetailDi
                 {t("sale.statusRejected")}
               </span>
             )}
+            {sale.status === "CANCELLED" && (
+              <span className="shrink-0 rounded-full bg-danger/15 px-2.5 py-1 text-xs font-bold text-danger-soft">
+                {t("sale.statusCancelled")}
+              </span>
+            )}
           </div>
 
           <div className="space-y-2 rounded-xl border border-ink-line p-3">

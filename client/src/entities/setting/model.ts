@@ -36,6 +36,7 @@ export type SystemInfo = {
     purchases: number;
     ingredients: number;
   };
+  hasAcceptedSales: boolean;
 };
 
 export type ClearDataSummary = {

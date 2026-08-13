@@ -102,6 +102,11 @@ export default function SellerHistoryPage() {
                         {t("sale.statusRejected")}
                       </span>
                     )}
+                    {sale.status === "CANCELLED" && (
+                      <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-bold text-danger-soft">
+                        {t("sale.statusCancelled")}
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}

@@ -1,33 +1,34 @@
 import { useState } from "react";
-import { Check, ShoppingBag, X } from "lucide-react";
+import { Check, Phone, ShoppingBag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { formatPrice } from "@/entities/product/lib";
-import { useAcceptSale, useRejectSale } from "@/entities/sale/api";
+import { useAcceptSale } from "@/entities/sale/api";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { OrderNotification } from "@/shared/notifications/model";
 import { useNotificationStore } from "@/shared/notifications/notificationStore";
 import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { toast } from "@/shared/stores/toastStore";
-import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 
 /**
  * The persistent "new order" popups — pushed by useNotificationStream.ts on every `order.new`
  * event, mounted once at the app root so they show up over whichever admin page the cashier is
- * currently on. A card only leaves this stack once its order is actually resolved (accepted or
- * rejected, from here or from the pending-orders panel) — never on a timer; see
- * notificationStore.ts's resolveOrderNotification.
+ * currently on. A card only leaves this stack once its order is actually accepted (from here or
+ * from the pending-orders panel) — never on a timer; see notificationStore.ts's
+ * resolveOrderNotification.
+ *
+ * Only ever mounted for a SUPER_ADMIN session (see AdminNotificationCenter.tsx) — the cashier
+ * can accept from here, but cannot decline: if an order can't be fulfilled, they call the owner,
+ * who declines it from their own dashboard (see owner.service.ts's rejectSale gating).
  */
 export function OrderNotificationStack() {
   const { t } = useTranslation();
   const notifications = useNotificationStore((s) => s.orderNotifications);
   const acceptSale = useAcceptSale();
-  const rejectSale = useRejectSale();
   const { printReceipt } = usePrintReceipt();
   const [payingFor, setPayingFor] = useState<OrderNotification | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
-  const [rejectingFor, setRejectingFor] = useState<OrderNotification | null>(null);
 
   function handleAcceptConfirm(cashReceived: number) {
     if (!payingFor || acceptSale.isPending) return;
@@ -45,17 +46,6 @@ export function OrderNotificationStack() {
     );
   }
 
-  function handleRejectConfirm() {
-    if (!rejectingFor || rejectSale.isPending) return;
-    rejectSale.mutate(rejectingFor.data.saleId, {
-      onSuccess: () => {
-        setRejectingFor(null);
-        toast.info(t("pos.pending.rejected"));
-      },
-      onError: (err) => toast.error(getErrorMessage(err, t("pos.saleFailed"))),
-    });
-  }
-
   if (notifications.length === 0) return null;
 
   return (
@@ -68,7 +58,7 @@ export function OrderNotificationStack() {
           stylesheet's cascade order and left the stack stuck flush-left on desktop). */}
       <div className="pointer-events-none fixed z-[71] flex w-[calc(100%-2rem)] max-w-sm flex-col-reverse items-end gap-2 [bottom:max(9.5rem,calc(env(safe-area-inset-bottom)+8.5rem))] [right:max(1rem,env(safe-area-inset-right))]">
         {notifications.map((n) => (
-          <OrderNotificationCard key={n.id} notification={n} onAccept={() => setPayingFor(n)} onReject={() => setRejectingFor(n)} />
+          <OrderNotificationCard key={n.id} notification={n} onAccept={() => setPayingFor(n)} />
         ))}
       </div>
 
@@ -80,30 +70,11 @@ export function OrderNotificationStack() {
         error={payError}
         onConfirm={handleAcceptConfirm}
       />
-
-      <ConfirmDialog
-        open={rejectingFor !== null}
-        title={t("pos.pending.rejectTitle")}
-        description={t("pos.pending.rejectDescription", { number: rejectingFor?.data.receiptNumber ?? "" })}
-        confirmLabel={t("pos.pending.rejectConfirm")}
-        danger
-        pending={rejectSale.isPending}
-        onConfirm={handleRejectConfirm}
-        onClose={() => setRejectingFor(null)}
-      />
     </>
   );
 }
 
-function OrderNotificationCard({
-  notification,
-  onAccept,
-  onReject,
-}: {
-  notification: OrderNotification;
-  onAccept: () => void;
-  onReject: () => void;
-}) {
+function OrderNotificationCard({ notification, onAccept }: { notification: OrderNotification; onAccept: () => void }) {
   const { t } = useTranslation();
   const { sellerName, tableNumber, receiptNumber, totalAmount, itemCount } = notification.data;
 
@@ -134,24 +105,18 @@ function OrderNotificationCard({
       <p className="mt-2 truncate text-xs text-white/40">
         №{receiptNumber} · {t("pos.itemsCount", { count: itemCount })}
       </p>
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={onReject}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-ink-line px-3 py-2 text-sm font-medium text-white/60 transition hover:border-danger/50 hover:text-danger-soft"
-        >
-          <X className="h-4 w-4" />
-          {t("pos.pending.reject")}
-        </button>
-        <button
-          type="button"
-          onClick={onAccept}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-champ py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover active:scale-[0.98]"
-        >
-          <Check className="h-4 w-4" />
-          {t("pos.acceptOrder")}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onAccept}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-champ py-2 text-sm font-bold text-onaccent transition hover:bg-champ-hover active:scale-[0.98]"
+      >
+        <Check className="h-4 w-4" />
+        {t("pos.acceptOrder")}
+      </button>
+      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-white/30">
+        <Phone className="h-3 w-3 shrink-0" />
+        {t("pos.pending.callOwnerHint")}
+      </p>
     </div>
   );
 }

@@ -243,7 +243,8 @@
   "user": {
     "role": {
       "SUPER_ADMIN": "Administrator",
-      "SELLER": "Sotuvchi"
+      "SELLER": "Sotuvchi",
+      "OWNER": "Egasi"
     },
     "title": "Foydalanuvchilar",
     "addUser": "Foydalanuvchi qo'shish",
@@ -319,7 +320,8 @@
       "rejected": "Buyurtma rad etildi",
       "rejectTitle": "Buyurtmani rad etasizmi?",
       "rejectDescription": "№{{number}} buyurtma rad etiladi. Ofitsiant buyurtma qabul qilinmaganini ko'radi.",
-      "rejectConfirm": "Buyurtmani rad etish"
+      "rejectConfirm": "Buyurtmani rad etish",
+      "callOwnerHint": "Agar buyurtmani bajarib bo'lmasa — egasiga qo'ng'iroq qiling"
     },
     "decreaseQuantity": "Miqdorni kamaytirish",
     "increaseQuantity": "Miqdorni oshirish",
@@ -384,6 +386,7 @@
     "statusPending": "Tasdiqlanishi kutilmoqda",
     "statusAccepted": "Qabul qilingan",
     "statusRejected": "Rad etilgan",
+    "statusCancelled": "Bekor qilingan",
     "totalCost": "Tannarx",
     "totalProfit": "Chek foydasi",
     "total": "Jami",
@@ -488,7 +491,8 @@
     "clearDataConfirmTitle": "Test ma'lumotlarini tozalash?",
     "clearDataConfirmDescription": "Barcha sotuvlar, xaridlar va ombor harakatlari butunlay o'chiriladi, ombordagi qoldiqlar nolga tushiriladi. Mahsulotlar, kategoriyalar, retseptlar, ingredientlar, yetkazib beruvchilar, fotolar va foydalanuvchilar o'zgarishsiz qoladi. Amalni bekor qilib bo'lmaydi.",
     "clearDataSuccess": "Tayyor: o'chirildi — sotuvlar: {{sales}}, xaridlar: {{purchases}}, ombor harakatlari: {{movements}}.",
-    "clearDataFailed": "Ma'lumotlarni tozalab bo'lmadi"
+    "clearDataFailed": "Ma'lumotlarni tozalab bo'lmadi",
+    "clearDataLocked": "Funksiya o'chirilgan: tizimda rasmiylashtirilgan va to'langan sotuvlar bor. Haqiqiy sotuvlar tarixi butunlay o'chirishdan himoyalangan."
   },
   "category": {
     "title": "Mahsulot kategoriyalari",
@@ -667,5 +671,34 @@
     "noIngredientsTitle": "Ingredientlar spravochnigi bo'sh",
     "noIngredientsDescription": "Avval spravochnikka ingredientlar qo'shing",
     "loadError": "Omborni yuklab bo'lmadi"
+  },
+  "owner": {
+    "loginTitle": "Egasi paneli",
+    "loginSubtitle": "Faqat egasining shaxsiy login va paroli bilan kirish mumkin",
+    "dashboardTitle": "Egasi paneli",
+    "dashboardDescription": "Bu yerda faqat rasmiylashtirilgan sotuvlar ko'rsatiladi. Har qanday tuzatish o'zgarishlar tarixida saqlanadi — hech narsa qaytarib bo'lmaydigan tarzda o'chirilmaydi.",
+    "pendingButton": "Qaror kutayotgan buyurtmalar",
+    "emptyTitle": "Hozircha sotuvlar yo'q",
+    "emptyDescription": "Rasmiylashtirilgan sotuvlar shu yerda paydo bo'ladi",
+    "columns": {
+      "status": "Holat"
+    },
+    "statusAccepted": "Rasmiylashtirilgan",
+    "addItem": "Mahsulot qo'shish",
+    "selectProduct": "Mahsulotni tanlang",
+    "removeItemTitle": "Chekdan pozitsiyani o'chirasizmi?",
+    "removeItemSuccess": "Pozitsiya o'chirildi",
+    "editItemTitle": "Pozitsiyani o'zgartirish",
+    "editItemSuccess": "O'zgarishlar saqlandi",
+    "addItemSuccess": "Mahsulot qo'shildi",
+    "cancelSale": "Chekni bekor qilish",
+    "cancelSaleTitle": "Chekni to'liq bekor qilasizmi?",
+    "cancelSaleSuccess": "Chek bekor qilindi",
+    "actionFailed": "Amalni bajarib bo'lmadi",
+    "changeLogTitle": "O'zgarishlar tarixi",
+    "reasonLabel": "Sabab",
+    "reasonPlaceholder": "Sabab (ixtiyoriy)",
+    "removedBy": "O'chirdi: {{name}}",
+    "cancelledInfo": "Bekor qildi: {{name}} · {{date}}"
   }
 }

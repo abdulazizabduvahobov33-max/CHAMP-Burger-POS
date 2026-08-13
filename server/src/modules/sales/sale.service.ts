@@ -38,7 +38,9 @@ function serializeSale(sale: SaleWithItems) {
 export async function getSale(id: string) {
   const sale = await prisma.sale.findUniqueOrThrow({
     where: { id },
-    include: { items: { include: { variant: { include: { product: true } } } }, table: true },
+    // removedAt: null — a seller's own receipt view reflects current, owner-corrected state,
+    // not the raw correction history (that's the owner panel's job — see owner.service.ts).
+    include: { items: { where: { removedAt: null }, include: { variant: { include: { product: true } } } }, table: true },
   });
   return serializeSale(sale);
 }
@@ -62,7 +64,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
         changeGiven: true,
         status: true,
         table: { select: { number: true } },
-        _count: { select: { items: true } },
+        _count: { select: { items: { where: { removedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -92,7 +94,7 @@ export async function listMySales(sellerId: string, page: number, pageSize: numb
 export async function getMySale(id: string, sellerId: string) {
   const sale = await prisma.sale.findUniqueOrThrow({
     where: { id },
-    include: { items: { include: { variant: { include: { product: true } } } }, table: true },
+    include: { items: { where: { removedAt: null }, include: { variant: { include: { product: true } } } }, table: true },
   });
   if (sale.sellerId !== sellerId) {
     // Same 404 as "doesn't exist" (not 403) — a seller has no business learning that a given

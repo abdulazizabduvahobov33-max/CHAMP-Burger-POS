@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ImagePlus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ImagePlus, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useClearData, useSettings, useSystemInfo, useUpdateSettings } from "@/entities/setting/api";
@@ -539,6 +539,11 @@ function DangerZoneSection() {
   const [result, setResult] = useState<ClearDataSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const clearDataMutation = useClearData();
+  // Same source of truth the server itself checks inside clearWorkingData() — once a single
+  // ACCEPTED sale exists, this becomes permanently locked (see settings.service.ts). Shown here
+  // proactively so the admin sees *why* it's gone, instead of a confirm dialog that just fails.
+  const { data: systemInfo } = useSystemInfo();
+  const locked = systemInfo?.hasAcceptedSales ?? false;
 
   if (role !== "SUPER_ADMIN") return null;
 
@@ -550,32 +555,41 @@ function DangerZoneSection() {
       </h2>
       <p className="mb-4 text-xs text-white/40">{t("settings.clearDataDescription")}</p>
 
-      {result && (
-        <p className="mb-4 text-sm text-success">
-          {t("settings.clearDataSuccess", {
-            sales: result.sales,
-            purchases: result.purchases,
-            movements: result.stockMovements,
-          })}
-        </p>
-      )}
-      {error && (
-        <div role="alert" className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger-soft">
-          {error}
+      {locked ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-ink-line bg-ink-soft px-4 py-3 text-sm text-white/50">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+          <span>{t("settings.clearDataLocked")}</span>
         </div>
-      )}
+      ) : (
+        <>
+          {result && (
+            <p className="mb-4 text-sm text-success">
+              {t("settings.clearDataSuccess", {
+                sales: result.sales,
+                purchases: result.purchases,
+                movements: result.stockMovements,
+              })}
+            </p>
+          )}
+          {error && (
+            <div role="alert" className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger-soft">
+              {error}
+            </div>
+          )}
 
-      <button
-        type="button"
-        onClick={() => {
-          setResult(null);
-          setError(null);
-          setConfirmOpen(true);
-        }}
-        className="rounded-xl border border-danger/50 px-4 py-2 text-sm font-bold text-danger-soft transition hover:bg-danger/10"
-      >
-        {t("settings.clearDataButton")}
-      </button>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null);
+              setError(null);
+              setConfirmOpen(true);
+            }}
+            className="rounded-xl border border-danger/50 px-4 py-2 text-sm font-bold text-danger-soft transition hover:bg-danger/10"
+          >
+            {t("settings.clearDataButton")}
+          </button>
+        </>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}

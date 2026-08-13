@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Clock, Loader2, ShoppingBag, X } from "lucide-react";
+import { Check, Clock, Loader2, Phone, ShoppingBag, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
@@ -19,11 +19,24 @@ function formatTime(iso: string): string {
 
 /**
  * The "new orders" queue behind the admin's "Оформление заказа" register screen — every order a
- * waiter (SELLER) has sent with "Отправить заказ", awaiting the admin's "Принять заказ" before
- * stock is deducted and payment is captured. Accepting immediately fires the receipt to the
- * paired printer, same as the register's own direct checkout.
+ * waiter (SELLER) has sent with "Отправить заказ", awaiting a decision before stock is deducted
+ * and payment is captured. Accepting immediately fires the receipt to the paired printer, same
+ * as the register's own direct checkout.
+ *
+ * `canReject` is false for the cashier (SUPER_ADMIN) instance of this panel — a cashier can only
+ * accept now; if an order genuinely can't be fulfilled, they call the owner instead of deciding
+ * on their own (see the in-row hint below). The OWNER's own dashboard reuses this same component
+ * with `canReject` true, since only the owner may actually decline one.
  */
-export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function PendingOrdersPanel({
+  open,
+  onClose,
+  canReject = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  canReject?: boolean;
+}) {
   const { t } = useTranslation();
   const { data: pending, isLoading } = usePendingSales();
   const acceptSale = useAcceptSale();
@@ -79,6 +92,7 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
               <PendingOrderRow
                 key={sale.id}
                 sale={sale}
+                canReject={canReject}
                 onAccept={() => setAccepting(sale)}
                 onReject={() => setRejecting(sale)}
               />
@@ -96,26 +110,30 @@ export function PendingOrdersPanel({ open, onClose }: { open: boolean; onClose: 
         onConfirm={handleAcceptConfirm}
       />
 
-      <ConfirmDialog
-        open={rejecting !== null}
-        title={t("pos.pending.rejectTitle")}
-        description={t("pos.pending.rejectDescription", { number: rejecting?.receiptNumber ?? "" })}
-        confirmLabel={t("pos.pending.rejectConfirm")}
-        danger
-        pending={rejectSale.isPending}
-        onConfirm={handleRejectConfirm}
-        onClose={() => setRejecting(null)}
-      />
+      {canReject && (
+        <ConfirmDialog
+          open={rejecting !== null}
+          title={t("pos.pending.rejectTitle")}
+          description={t("pos.pending.rejectDescription", { number: rejecting?.receiptNumber ?? "" })}
+          confirmLabel={t("pos.pending.rejectConfirm")}
+          danger
+          pending={rejectSale.isPending}
+          onConfirm={handleRejectConfirm}
+          onClose={() => setRejecting(null)}
+        />
+      )}
     </>
   );
 }
 
 function PendingOrderRow({
   sale,
+  canReject,
   onAccept,
   onReject,
 }: {
   sale: PendingSale;
+  canReject: boolean;
   onAccept: () => void;
   onReject: () => void;
 }) {
@@ -148,14 +166,16 @@ function PendingOrderRow({
         ))}
       </ul>
       <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={onReject}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-ink-line px-3 py-2 text-sm font-medium text-white/60 transition hover:border-danger/50 hover:text-danger-soft"
-        >
-          <X className="h-4 w-4" />
-          {t("pos.pending.reject")}
-        </button>
+        {canReject && (
+          <button
+            type="button"
+            onClick={onReject}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-ink-line px-3 py-2 text-sm font-medium text-white/60 transition hover:border-danger/50 hover:text-danger-soft"
+          >
+            <X className="h-4 w-4" />
+            {t("pos.pending.reject")}
+          </button>
+        )}
         <button
           type="button"
           onClick={onAccept}
@@ -165,6 +185,12 @@ function PendingOrderRow({
           {t("pos.acceptOrder")}
         </button>
       </div>
+      {!canReject && (
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-white/30">
+          <Phone className="h-3 w-3 shrink-0" />
+          {t("pos.pending.callOwnerHint")}
+        </p>
+      )}
     </div>
   );
 }

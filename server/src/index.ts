@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/db.js";
 import { ensureAdminExists, ensureSellerExists } from "./bootstrap/ensureUsers.js";
+import { ensureOwnerExists } from "./bootstrap/ensureOwnerExists.js";
 import { ensureIngredientsSeeded } from "./bootstrap/ensureIngredientsSeeded.js";
 import { ensureMenuSeeded } from "./bootstrap/ensureMenuSeeded.js";
 import { purgeLegacyMenu } from "./bootstrap/purgeLegacyMenu.js";
@@ -11,6 +12,7 @@ import { refreshMenuPhotos } from "./bootstrap/refreshMenuPhotos.js";
 async function bootstrap() {
   await ensureAdminExists();
   await ensureSellerExists();
+  await ensureOwnerExists();
   await purgeLegacyMenu();
   await rebrandCafeName();
   await ensureMenuSeeded();

@@ -85,7 +85,10 @@ export async function computeProfitStats(locationId: string, start?: Date, end?:
     }),
     prisma.saleItem.groupBy({
       by: ["variantId"],
-      where: { sale: { locationId, ...acceptedOnly, ...dateWhere } },
+      // removedAt: null — matches revenueAgg above: Sale.totalAmount is already recomputed to
+      // exclude owner-removed items (see owner.service.ts), so cost must exclude them too or
+      // profit would be understated for a sale with a correction on it.
+      where: { removedAt: null, sale: { locationId, ...acceptedOnly, ...dateWhere } },
       _sum: { quantity: true },
     }),
   ]);

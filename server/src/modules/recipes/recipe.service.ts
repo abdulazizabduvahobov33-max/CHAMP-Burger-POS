@@ -129,6 +129,55 @@ export async function deductRecipeIngredients(
   return results;
 }
 
+/**
+ * The inverse of deductRecipeIngredients — puts an already-deducted quantity's ingredients back
+ * on the shelf. Used exclusively by the owner panel's sale-correction endpoints (item removed,
+ * quantity reduced, whole sale cancelled): none of those are a new sale, they're undoing part of
+ * one that already happened, so the StockMovement they leave behind is logged as ADJUST (manual
+ * correction), not a second SALE entry. Unlike deduction, restocking never fails on
+ * insufficient-anything — there's no floor to check going up — so this is a plain `increment`,
+ * one movement row per recipe line, same shape as the deduction side for symmetry in the ledger.
+ */
+export async function restockRecipeIngredients(
+  tx: TxClient,
+  variantId: string,
+  locationId: string,
+  saleQuantity: number,
+  userId: string,
+  referenceId?: string,
+): Promise<DeductedLine[]> {
+  const lines = await tx.recipe.findMany({ where: { variantId }, include: { ingredient: true } });
+  if (lines.length === 0) {
+    return [];
+  }
+
+  const results: DeductedLine[] = [];
+
+  for (const line of lines) {
+    const amount = line.quantity.mul(saleQuantity);
+
+    await tx.stock.updateMany({
+      where: { ingredientId: line.ingredientId, locationId },
+      data: { quantity: { increment: amount } },
+    });
+
+    await tx.stockMovement.create({
+      data: {
+        ingredientId: line.ingredientId,
+        locationId,
+        change: amount,
+        reason: "ADJUST",
+        referenceId,
+        createdById: userId,
+      },
+    });
+
+    results.push({ ingredientId: line.ingredientId, ingredientName: line.ingredient.name, amount: amount.toString() });
+  }
+
+  return results;
+}
+
 export async function consumeRecipeStock(
   variantId: string,
   locationId: string,

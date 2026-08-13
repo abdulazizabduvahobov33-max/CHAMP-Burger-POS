@@ -14,6 +14,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import ingredientRoutes from "./modules/ingredients/ingredient.routes.js";
 import categoryRoutes from "./modules/categories/category.routes.js";
 import tableRoutes from "./modules/tables/table.routes.js";
+import ownerRoutes from "./modules/owner/owner.routes.js";
 import productRoutes from "./modules/products/product.routes.js";
 import uploadRoutes from "./modules/uploads/upload.routes.js";
 import recipeRoutes from "./modules/recipes/recipe.routes.js";
@@ -125,11 +126,18 @@ export function createApp() {
   app.use("/api/products", authenticate, productRoutes);
   app.use("/api/uploads", authenticate, authorize("SUPER_ADMIN"), uploadRoutes);
   app.use("/api/recipes", authenticate, authorize("SUPER_ADMIN"), recipeRoutes);
-  app.use("/api/sales", authenticate, authorize("SUPER_ADMIN", "SELLER"), saleRoutes);
+  // OWNER included: the owner panel accepts/declines pending orders and reads sale detail
+  // through this same router (see sale.routes.ts) — per-route authorize() calls inside it draw
+  // the finer line (e.g. only OWNER may reject), this outer gate just has to not exclude them.
+  app.use("/api/sales", authenticate, authorize("SUPER_ADMIN", "SELLER", "OWNER"), saleRoutes);
   app.use("/api/reports", authenticate, authorize("SUPER_ADMIN"), reportRoutes);
   app.use("/api/suppliers", authenticate, authorize("SUPER_ADMIN"), supplierRoutes);
   app.use("/api/purchases", authenticate, authorize("SUPER_ADMIN"), purchaseRoutes);
   app.use("/api/users", authenticate, authorize("SUPER_ADMIN"), userRoutes);
+  // The owner panel — corrections to already-ACCEPTED sales (see owner.service.ts). Gated to
+  // role OWNER only, which nothing else in the app can grant itself; see
+  // bootstrap/ensureOwnerExists.ts for how that account comes to exist at all.
+  app.use("/api/owner", authenticate, authorize("OWNER"), ownerRoutes);
   // Authenticates itself (query-token, not the Authorization header — EventSource can't set
   // custom headers) inside notification.controller.ts, so it deliberately skips the shared
   // `authenticate` middleware other route groups use.
@@ -138,7 +146,9 @@ export function createApp() {
   // The one settings slice a SELLER also needs — the company/receipt text printed on every
   // checkout. Registered separately (not nested under /api/settings) so it isn't caught by that
   // router's SUPER_ADMIN gate above; see getReceiptSettings()'s comment for the full reasoning.
-  app.use("/api/receipt-info", authenticate, authorize("SUPER_ADMIN", "SELLER"), asyncHandler(receiptInfo));
+  // OWNER included too: their dashboard reuses PendingOrdersPanel (see OwnerDashboardPage.tsx),
+  // which can print a receipt on accept the same as the cashier's does.
+  app.use("/api/receipt-info", authenticate, authorize("SUPER_ADMIN", "SELLER", "OWNER"), asyncHandler(receiptInfo));
   app.use("/api/ai", authenticate, authorize("SUPER_ADMIN"), aiRoutes);
 
   // ── Fallbacks ───────────────────────────────────────────────

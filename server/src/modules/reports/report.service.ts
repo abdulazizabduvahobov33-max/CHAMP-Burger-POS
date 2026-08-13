@@ -79,7 +79,9 @@ export async function listSales(locationId: string, query: SalesListQuery) {
         totalAmount: true,
         seller: { select: { name: true } },
         table: { select: { number: true } },
-        _count: { select: { items: true } },
+        // removedAt: null — an owner-panel-removed line item shouldn't inflate the count shown
+        // here; Sale.totalAmount is already recomputed to match (see owner.service.ts).
+        _count: { select: { items: { where: { removedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.pageSize,
@@ -118,7 +120,9 @@ export async function getSaleDetail(locationId: string, id: string) {
     include: {
       seller: { select: { name: true } },
       table: { select: { number: true } },
-      items: { include: { variant: { include: { product: true } } } },
+      // Same reasoning as listSales' _count above — a report reflects current accurate state,
+      // not the correction history; that's what the owner panel is for.
+      items: { where: { removedAt: null }, include: { variant: { include: { product: true } } } },
     },
   });
 
@@ -177,7 +181,9 @@ export async function getTopProducts(locationId: string, query: TopProductsQuery
 
   const grouped = await prisma.saleItem.groupBy({
     by: ["variantId"],
-    where: { sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
+    // removedAt: null — an owner-panel-removed line item never counts toward what actually
+    // sold, same reasoning as excluding a CANCELLED sale entirely via status: "ACCEPTED".
+    where: { removedAt: null, sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
     _sum: { quantity: true, subtotal: true },
     orderBy: { _sum: { quantity: "desc" } },
     take: query.limit,
@@ -224,7 +230,7 @@ export async function getProductProfitability(locationId: string, query: Product
 
   const grouped = await prisma.saleItem.groupBy({
     by: ["variantId"],
-    where: { sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
+    where: { removedAt: null, sale: { locationId, status: "ACCEPTED", createdAt: { gte: range.start, lte: range.end } } },
     _sum: { quantity: true, subtotal: true },
   });
 

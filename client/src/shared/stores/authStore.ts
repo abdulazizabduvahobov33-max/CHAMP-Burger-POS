@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Role = "SUPER_ADMIN" | "SELLER";
+export type Role = "SUPER_ADMIN" | "SELLER" | "OWNER";
 
 export type AuthUser = {
   id: string;

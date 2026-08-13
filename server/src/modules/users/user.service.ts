@@ -27,14 +27,21 @@ function serializeUser(user: User) {
   };
 }
 
+// OWNER rows never appear here — the Users page is a SUPER_ADMIN admin tool, and the owner
+// account (bootstrap/ensureOwnerExists.ts) must stay invisible to it entirely, not just
+// uneditable. See user.schema.ts for why creating/promoting-to OWNER is already blocked
+// upstream; this is the read-side half of the same guarantee.
 export async function listUsers() {
-  const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
+  const users = await prisma.user.findMany({ where: { role: { not: "OWNER" } }, orderBy: { name: "asc" } });
   return users.map(serializeUser);
 }
 
 async function findUserOrThrow(id: string) {
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) {
+  // Same 404-not-403 idiom as sale.service.ts's getMySale — a SUPER_ADMIN crafting a request
+  // against a known/guessed OWNER user id learns nothing (not even that the id is valid),
+  // rather than getting a clean "forbidden" that confirms the account exists.
+  if (!user || user.role === "OWNER") {
     throw new AppError(404, "NOT_FOUND", "Пользователь не найден");
   }
   return user;
