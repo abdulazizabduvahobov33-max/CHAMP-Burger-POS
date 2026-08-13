@@ -328,6 +328,10 @@
     "removeFromCart": "Savatdan o'chirish",
     "weight": {
       "pricePerKg": "1 kg narxi",
+      "byAmount": "Summa bo'yicha",
+      "byWeight": "Vazn bo'yicha",
+      "enterAmount": "Summani kiriting",
+      "calculatedWeight": "Vazn",
       "enterWeight": "Vaznni kiriting",
       "gramsShort": "g",
       "perKgSuffix": "/kg",

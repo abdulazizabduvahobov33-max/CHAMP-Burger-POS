@@ -328,6 +328,10 @@
     "removeFromCart": "Удалить из корзины",
     "weight": {
       "pricePerKg": "Цена за 1 кг",
+      "byAmount": "По сумме",
+      "byWeight": "По весу",
+      "enterAmount": "Введите сумму",
+      "calculatedWeight": "Вес",
       "enterWeight": "Введите вес",
       "gramsShort": "г",
       "perKgSuffix": "/кг",
