@@ -434,6 +434,11 @@
       "forgetDescription": "Принтер «{{name}}» будет удалён из списка. Печать чеков переключится на предпросмотр, пока вы не подключите его снова.",
       "transportUsb": "USB",
       "transportBluetooth": "Bluetooth",
+      "status": {
+        "connected": "Принтер подключён",
+        "connecting": "Переподключение…",
+        "disconnected": "Принтер отключён"
+      },
       "wizard": {
         "title": "Подключение принтера",
         "transportPrompt": "Как подключён принтер к этому устройству?",

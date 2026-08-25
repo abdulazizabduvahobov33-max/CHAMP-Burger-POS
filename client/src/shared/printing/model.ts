@@ -79,4 +79,11 @@ export interface ReceiptPrinterDriver {
    * gesture for its device picker. Resolves once the user has chosen (or cancelled) a device. */
   pair(): Promise<PairResult>;
   print(doc: ReceiptDocument, profile: PrinterProfile): Promise<PrintResult>;
+  /** Optional lightweight "is this already-paired printer reachable right now" probe — used by
+   * printerConnectionManager.ts to drive the connection status shown in Settings and to warm the
+   * connection just before a print, without sending an actual receipt. Never shows a device
+   * picker — only checks/reconnects to a device the browser has already authorized, the same way
+   * print() itself resolves a device. A driver that doesn't implement this (previewDriver, which
+   * is never really "disconnected") is treated as always available. */
+  checkAvailable?(profile: PrinterProfile): Promise<boolean>;
 }

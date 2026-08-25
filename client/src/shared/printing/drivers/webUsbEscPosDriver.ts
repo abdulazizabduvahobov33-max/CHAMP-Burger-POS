@@ -53,6 +53,16 @@ export const webUsbEscPosDriver: ReceiptPrinterDriver = {
     }
   },
 
+  /** Cheapest possible signal WebUSB offers: does the browser's already-authorized device list
+   * still contain a device matching this profile's identity. Doesn't open() or claim anything —
+   * that's what print() itself already does — so this never has a side effect on an in-progress
+   * print. */
+  async checkAvailable(profile: PrinterProfile): Promise<boolean> {
+    if (!profile.usb) return false;
+    const device = await findDeviceByIdentity(profile.usb.vendorId, profile.usb.productId);
+    return device !== null;
+  },
+
   async print(doc: ReceiptDocument, profile: PrinterProfile): Promise<PrintResult> {
     if (!profile.usb) return { ok: false, error: "Профиль принтера повреждён — подключите принтер заново" };
     try {

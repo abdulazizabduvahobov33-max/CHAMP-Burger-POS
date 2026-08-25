@@ -81,6 +81,24 @@ export const webBluetoothEscPosDriver: ReceiptPrinterDriver = {
     }
   },
 
+  /** Unlike WebUSB, Bluetooth has no "is it there" signal cheaper than actually connecting the
+   * GATT server — `device.gatt.connected` only tells us about a connection already established
+   * in this page session, so a cold check still has to attempt connect(). This IS the reconnect:
+   * printerConnectionManager.ts calls it before a print specifically so that a real receipt send
+   * a moment later finds an already-connected server instead of paying this cost inline. */
+  async checkAvailable(profile: PrinterProfile): Promise<boolean> {
+    if (!profile.bluetooth) return false;
+    const device = await findPairedDevice(profile.bluetooth.deviceId);
+    if (!device?.gatt) return false;
+    if (device.gatt.connected) return true;
+    try {
+      await device.gatt.connect();
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   async print(doc: ReceiptDocument, profile: PrinterProfile): Promise<PrintResult> {
     if (!profile.bluetooth) return { ok: false, error: "Профиль принтера повреждён — подключите принтер заново" };
     try {

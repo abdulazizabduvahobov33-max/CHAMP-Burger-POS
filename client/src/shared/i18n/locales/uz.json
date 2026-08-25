@@ -434,6 +434,11 @@
       "forgetDescription": "«{{name}}» printeri ro'yxatdan o'chiriladi. Siz uni qayta ulaguningizcha cheklar oldindan ko'rinish rejimida chop etiladi.",
       "transportUsb": "USB",
       "transportBluetooth": "Bluetooth",
+      "status": {
+        "connected": "Printer ulangan",
+        "connecting": "Qayta ulanmoqda…",
+        "disconnected": "Printer uzilgan"
+      },
       "wizard": {
         "title": "Printerni ulash",
         "transportPrompt": "Printer shu qurilmaga qanday ulangan?",

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type { PairResult, PrinterProfile, PrinterRole, PrinterTransport, ReceiptDocument } from "@/shared/printing/model";
 import { DEFAULT_PRINTER_MODEL_ID, PRINTER_MODEL_PRESETS } from "@/shared/printing/printerModels";
+import { reportPrintResult } from "@/shared/printing/printerConnectionManager";
 import { getDriver, getPairableDrivers } from "@/shared/printing/printerRegistry";
 import { usePrinterProfilesStore } from "@/shared/printing/printerProfilesStore";
 import { Dialog } from "@/shared/ui/Dialog";
@@ -116,6 +117,9 @@ export function PrinterSetupWizard({ open, onClose }: { open: boolean; onClose: 
     const result = await getDriver(savedProfile.transport).print(buildTestDocument(savedProfile.paperWidthMm), savedProfile);
     setTesting(false);
     setTestResult(result.ok ? "ok" : "fail");
+    // A test print's own success/failure is the strongest possible signal for the freshly-paired
+    // profile — no reason to wait for the first real checkout print to know the status.
+    reportPrintResult(savedProfile.id, result.ok);
   }
 
   const pairableDrivers = getPairableDrivers();

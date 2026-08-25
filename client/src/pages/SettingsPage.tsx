@@ -13,6 +13,7 @@ import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { deleteImage, resolveUploadUrl, uploadImage } from "@/shared/lib/uploads";
 import type { PrinterProfile, PrinterRole, PrinterTransport } from "@/shared/printing/model";
+import { usePrinterConnectionState } from "@/shared/printing/printerConnectionManager";
 import { getPairableDrivers } from "@/shared/printing/printerRegistry";
 import { usePrinterProfilesStore } from "@/shared/printing/printerProfilesStore";
 import { PrinterSetupWizard } from "@/widgets/printer-wizard/PrinterSetupWizard";
@@ -361,6 +362,10 @@ function PrinterSection() {
               <p className="mt-0.5 text-xs text-white/40">
                 {t(TRANSPORT_LABEL_KEY[profile.transport])} · {profile.paperWidthMm} мм
               </p>
+              {/* Only "register" is actually wired to a print call site today (see model.ts's
+                  PrinterRole comment) — a kitchen/bar profile has nothing to report a live status
+                  for yet. */}
+              {profile.role === "register" && <PrinterStatusLine profileId={profile.id} />}
             </div>
             <button
               type="button"
@@ -398,6 +403,27 @@ function PrinterSection() {
       />
     </section>
   );
+}
+
+/** The one small addition this pass makes to the printer section's existing list item — a plain
+ * status word driven by printerConnectionManager.ts's per-profile state, nothing else changed
+ * about how this section looks or is laid out. */
+function PrinterStatusLine({ profileId }: { profileId: string }) {
+  const { t } = useTranslation();
+  const state = usePrinterConnectionState(profileId);
+
+  const STATE_STYLE: Record<typeof state, string> = {
+    connected: "text-success",
+    connecting: "text-warn",
+    disconnected: "text-danger-soft",
+  };
+  const STATE_LABEL_KEY: Record<typeof state, string> = {
+    connected: "settings.printer.status.connected",
+    connecting: "settings.printer.status.connecting",
+    disconnected: "settings.printer.status.disconnected",
+  };
+
+  return <p className={`mt-1 text-xs font-medium ${STATE_STYLE[state]}`}>{t(STATE_LABEL_KEY[state])}</p>;
 }
 
 /** Mute + volume for the "new order" chime (shared/notifications/sound.ts) — deliberately per-
