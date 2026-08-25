@@ -27,6 +27,17 @@ export function resolveUploadUrl(url: string | null | undefined): string | null 
   return `${UPLOADS_ORIGIN}${url}`;
 }
 
+/** The optimized-thumbnail counterpart of an uploaded image's URL — same directory, same
+ * basename, always `.thumb.webp` regardless of the original's own extension (see
+ * server/src/shared/utils/imageThumbnails.ts, which generates it under that exact name). A pure
+ * string transform, not a lookup: whether the file actually exists is discovered by the <img>'s
+ * own onError fallback (see ProductImage.tsx), never checked here. Apply this to the RAW url
+ * from the API before resolveUploadUrl(), not after — the origin prefix has to end up on the
+ * outside either way, and composing it in that order is what the callers below already do. */
+export function toThumbnailUrl(url: string): string {
+  return url.replace(/\.[^./?#]+$/, ".thumb.webp");
+}
+
 /** Generic image upload — not tied to any one entity (`/uploads/image` just stores a file and
  * hands back its URL; Module 4 built it for product photos, Module 10 reuses it unchanged for
  * the company logo). */

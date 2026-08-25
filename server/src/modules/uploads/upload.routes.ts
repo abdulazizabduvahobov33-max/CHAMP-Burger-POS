@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
 import { asyncHandler } from "../../shared/utils/asyncHandler.js";
+import { generateThumbnail } from "../../shared/utils/imageThumbnails.js";
 import { deleteUploadedFile, imageUpload, UPLOADS_URL_PREFIX } from "../../shared/utils/uploads.js";
 
 const deleteImageSchema = z.object({ url: z.string().trim().min(1) });
@@ -24,6 +25,14 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) {
       throw new AppError(422, "INVALID_IMAGE", "Файл не получен");
+    }
+    try {
+      await generateThumbnail(req.file.filename);
+    } catch (err) {
+      // Best-effort — a thumbnail failure must never fail the upload itself; ProductImage.tsx
+      // already falls back to the original URL whenever a thumbnail 404s.
+      // eslint-disable-next-line no-console
+      console.error(`⚠️  Could not generate thumbnail for ${req.file.filename}:`, err);
     }
     res.status(201).json({ url: `${UPLOADS_URL_PREFIX}${req.file.filename}` });
   }),

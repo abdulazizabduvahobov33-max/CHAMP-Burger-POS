@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { Check, Search, UtensilsCrossed, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -28,7 +28,6 @@ export function PosMenu() {
   // truncates once a location's catalog outgrows a single page — see Module 4's ProductsTable.
   const { data, isLoading } = useProducts({ search, categoryId: categoryId || undefined, isActive: true, page, pageSize: PAGE_SIZE });
   const addItem = useCartStore((s) => s.addItem);
-  const cartLines = useCartStore((s) => s.lines);
   const openWeightEntry = useWeightEntryStore((s) => s.open);
 
   const products = data?.items ?? [];
@@ -40,39 +39,47 @@ export function PosMenu() {
     };
   }
 
-  function handleAdd(product: Product, variant: ProductVariant) {
-    addItem({
-      variantId: variant.id,
-      productId: product.id,
-      productName: product.name,
-      variantLabel: variant.label,
-      imageUrl: product.imageUrl,
-      unitPrice: variant.price,
-      saleType: product.saleType,
-    });
-  }
-
   // A WEIGHT product never goes straight into the cart on tap — the price depends on how much of
   // it is being sold, which nobody knows yet at click time. Opens the weight dialog instead (see
   // shared/stores/weightEntryStore.ts); if this exact variant is already in the cart, pre-fills
   // the dialog with its current weight so re-tapping the card is how you *adjust* an amount
   // already added, not how you add a confusing second line for the same product.
-  function handleCardTap(product: Product, variant: ProductVariant) {
-    if (product.saleType !== "WEIGHT") {
-      handleAdd(product, variant);
-      return;
-    }
-    const existing = cartLines.find((l) => l.variantId === variant.id);
-    openWeightEntry({
-      variantId: variant.id,
-      productId: product.id,
-      productName: product.name,
-      variantLabel: variant.label,
-      imageUrl: product.imageUrl,
-      unitPrice: variant.price,
-      initialGrams: existing ? Math.round(existing.quantity * 1000) : undefined,
-    });
-  }
+  //
+  // One stable callback for every card (useCallback, deps are the two Zustand action functions —
+  // stable for the store's lifetime) instead of a fresh closure bound to each product per render
+  // — that's what actually lets PosProductCard below skip re-rendering when nothing about IT
+  // changed. Reads the cart's current lines via getState() at tap time rather than a reactive
+  // useCartStore(s => s.lines) subscription — same result (this only ever runs from a click, a
+  // point-in-time read), but it means PosMenu itself no longer re-renders (and cascades a
+  // re-render into all ~24 visible cards) every time any item is added to or edited in the cart,
+  // which it previously did on every single tap regardless of which product was tapped.
+  const handleCardTap = useCallback(
+    (product: Product, variant: ProductVariant) => {
+      if (product.saleType === "WEIGHT") {
+        const existing = useCartStore.getState().lines.find((l) => l.variantId === variant.id);
+        openWeightEntry({
+          variantId: variant.id,
+          productId: product.id,
+          productName: product.name,
+          variantLabel: variant.label,
+          imageUrl: product.imageUrl,
+          unitPrice: variant.price,
+          initialGrams: existing ? Math.round(existing.quantity * 1000) : undefined,
+        });
+        return;
+      }
+      addItem({
+        variantId: variant.id,
+        productId: product.id,
+        productName: product.name,
+        variantLabel: variant.label,
+        imageUrl: product.imageUrl,
+        unitPrice: variant.price,
+        saleType: product.saleType,
+      });
+    },
+    [addItem, openWeightEntry],
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -131,7 +138,7 @@ export function PosMenu() {
         {!isLoading && products.length > 0 && (
           <div key={`${search}-${categoryId}-${page}`} className="grid animate-fade-in grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => (
-              <PosProductCard key={product.id} product={product} onAdd={(variant) => handleCardTap(product, variant)} />
+              <PosProductCard key={product.id} product={product} onTap={handleCardTap} />
             ))}
           </div>
         )}
@@ -164,7 +171,19 @@ function CategoryPill({
   );
 }
 
-function PosProductCard({ product, onAdd }: { product: Product; onAdd: (variant: ProductVariant) => void }) {
+// Memoized so a PosMenu re-render for a reason that has nothing to do with this specific card
+// (search input still debouncing, the cart changing, another card's own "just added" flash) skips
+// it entirely — React's default shallow-compares `product` (stable across re-renders that don't
+// actually refetch the product list — React Query keeps the same object reference) and `onTap`
+// (now a single stable useCallback shared by every card, see PosMenu above), so this only
+// actually re-renders when the product it displays genuinely changed.
+const PosProductCard = memo(function PosProductCard({
+  product,
+  onTap,
+}: {
+  product: Product;
+  onTap: (product: Product, variant: ProductVariant) => void;
+}) {
   const { t } = useTranslation();
   const isWeight = product.saleType === "WEIGHT";
   const singleVariant = product.variants.length === 1 ? product.variants[0] : null;
@@ -172,7 +191,7 @@ function PosProductCard({ product, onAdd }: { product: Product; onAdd: (variant:
   const flashTimeoutRef = useRef<number>();
 
   function handleAdd(variant: ProductVariant) {
-    onAdd(variant);
+    onTap(product, variant);
     // A WEIGHT tap opens the weight dialog (see PosMenu's handleCardTap) instead of adding
     // anything immediately — the checkmark flash belongs to an item that just landed in the
     // cart, which hasn't happened yet here.
@@ -242,4 +261,4 @@ function PosProductCard({ product, onAdd }: { product: Product; onAdd: (variant:
       </div>
     </div>
   );
-}
+});
