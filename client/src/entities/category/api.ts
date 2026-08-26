@@ -12,6 +12,10 @@ export function useCategories() {
       const { data } = await api.get<{ items: Category[] }>("/categories");
       return data.items;
     },
+    // Categories change rarely (admin-only CRUD); every mutation above already invalidates this
+    // key on success, so a longer staleTime only cuts refetch-on-remount noise, never staleness
+    // after a real edit. Same pattern as useReceiptSettings() in entities/setting/api.ts.
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -12,6 +12,10 @@ export function useTables() {
       const { data } = await api.get<{ items: Table[] }>("/tables");
       return data.items;
     },
+    // Just the table roster (number/isActive) — live order/occupancy state lives elsewhere, not
+    // on this row, so a longer staleTime can't show a stale order. Every mutation above already
+    // invalidates this key on success. Same pattern as useReceiptSettings() in entities/setting/api.ts.
+    staleTime: 5 * 60 * 1000,
   });
 }
 

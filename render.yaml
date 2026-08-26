@@ -60,6 +60,17 @@ services:
         value: Продавец
       - key: SEED_SELLER_PASSWORD
         sync: false
+      # Optional — product photo storage (Supabase Storage). Leave unset to keep using the local
+      # /uploads disk (ephemeral on Free — see docs/RENDER_DEPLOY.md). Set all three, from the
+      # Supabase dashboard, once you have a real project + bucket; until then new uploads keep
+      # using local disk and existing behavior is unchanged. Never put real values directly in
+      # this file — set them in the Render dashboard under this service's Environment tab.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET_NAME
+        sync: false
 
   - type: web
     name: champ-pos-frontend

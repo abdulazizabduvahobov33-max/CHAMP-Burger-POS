@@ -24,4 +24,10 @@ describe("toThumbnailUrl", () => {
       `/uploads/${original.replace(/\.[^./]+$/, ".thumb.webp")}`,
     );
   });
+
+  it("applies the same convention to an R2-hosted photo's full URL", () => {
+    expect(toThumbnailUrl("https://pub-abc123.r2.dev/champ-pos-uploads/9b4f345a-40cb.jpg")).toBe(
+      "https://pub-abc123.r2.dev/champ-pos-uploads/9b4f345a-40cb.thumb.webp",
+    );
+  });
 });

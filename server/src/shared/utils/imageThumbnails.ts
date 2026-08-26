@@ -54,3 +54,18 @@ export async function generateThumbnail(originalFilename: string): Promise<void>
     .webp({ quality: THUMBNAIL_QUALITY })
     .toFile(thumbnailPath);
 }
+
+/** Same resize/re-encode as generateThumbnail(), but in-memory end to end — used for the R2
+ * upload path (upload.routes.ts), where the original never touches local disk either, so there's
+ * no file to read from or write to. */
+export async function generateThumbnailBuffer(originalBuffer: Buffer): Promise<Buffer> {
+  return sharp(originalBuffer)
+    .resize({
+      width: THUMBNAIL_MAX_DIMENSION,
+      height: THUMBNAIL_MAX_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: THUMBNAIL_QUALITY })
+    .toBuffer();
+}

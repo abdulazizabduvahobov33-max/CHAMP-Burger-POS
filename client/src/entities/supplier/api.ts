@@ -12,6 +12,9 @@ export function useSuppliers() {
       const { data } = await api.get<{ items: Supplier[] }>("/suppliers");
       return data.items;
     },
+    // Suppliers change rarely (admin-only CRUD); every mutation above already invalidates this
+    // key on success. Same pattern as useReceiptSettings() in entities/setting/api.ts.
+    staleTime: 5 * 60 * 1000,
   });
 }
 
