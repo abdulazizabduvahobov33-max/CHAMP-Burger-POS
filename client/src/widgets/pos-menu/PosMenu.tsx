@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 
 import { useCategories } from "@/entities/category/api";
 import { useProducts } from "@/entities/product/api";
-import { formatPrice } from "@/entities/product/lib";
+import { formatPrice, formatPriceRange } from "@/entities/product/lib";
 import type { Product, ProductVariant } from "@/entities/product/model";
+import { Dialog } from "@/shared/ui/Dialog";
 import { useCartStore } from "@/shared/stores/cartStore";
 import { useWeightEntryStore } from "@/shared/stores/weightEntryStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -24,6 +25,9 @@ export function PosMenu() {
   const { t } = useTranslation();
   const [searchInput, setSearchInput] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // Which multi-variant product's picker is open — null means closed. Owned here (not inside a
+  // tile) because exactly one picker can be open at a time regardless of which tile opened it.
+  const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
 
   const { data: categories } = useCategories();
   const { data, isLoading } = useProducts({ isActive: true, page: 1, pageSize: CATALOG_PAGE_SIZE });
@@ -46,7 +50,10 @@ export function PosMenu() {
   // it is being sold, which nobody knows yet at click time. Opens the weight dialog instead (see
   // shared/stores/weightEntryStore.ts); if this exact variant is already in the cart, pre-fills
   // the dialog with its current weight so re-tapping the tile is how you *adjust* an amount
-  // already added, not how you add a confusing second line for the same product.
+  // already added, not how you add a confusing second line for the same product. This is the one
+  // handler that actually adds/opens-for a specific, already-decided variant — both the
+  // single-variant tile (tap = the only variant) and the picker dialog (tap = the chosen variant)
+  // call this exact same function, so a WEIGHT product behaves identically either way.
   //
   // One stable callback for every tile (useCallback, deps are the two Zustand action functions —
   // stable for the store's lifetime) instead of a fresh closure bound to each product per render
@@ -81,6 +88,22 @@ export function PosMenu() {
       });
     },
     [addItem, openWeightEntry],
+  );
+
+  // A multi-variant tile can't tap-to-add directly (which price would apply is ambiguous) — it
+  // opens this picker instead. Stable across renders for the same memoization reason as
+  // handleTap above.
+  const handleOpenPicker = useCallback((product: Product) => {
+    setVariantPickerProduct(product);
+  }, []);
+
+  const handleVariantSelect = useCallback(
+    (variant: ProductVariant) => {
+      if (!variantPickerProduct) return;
+      handleTap(variantPickerProduct, variant);
+      setVariantPickerProduct(null);
+    },
+    [variantPickerProduct, handleTap],
   );
 
   return (
@@ -140,11 +163,17 @@ export function PosMenu() {
         {!isLoading && products.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {products.map((product) => (
-              <PosProductTile key={product.id} product={product} onTap={handleTap} />
+              <PosProductTile key={product.id} product={product} onTap={handleTap} onOpenPicker={handleOpenPicker} />
             ))}
           </div>
         )}
       </div>
+
+      <VariantPickerDialog
+        product={variantPickerProduct}
+        onSelect={handleVariantSelect}
+        onClose={() => setVariantPickerProduct(null)}
+      />
     </div>
   );
 }
@@ -174,11 +203,12 @@ function CategoryButton({
 }
 
 // Memoized so a PosMenu re-render for a reason that has nothing to do with this specific tile
-// (search input changing, the cart changing, another tile's own "just added" flash) skips it
-// entirely — React's default shallow-compares `product` (stable across re-renders that don't
-// actually refetch the product list — React Query keeps the same object reference) and `onTap`
-// (a single stable useCallback shared by every tile, see PosMenu above), so this only actually
-// re-renders when the product it displays genuinely changed.
+// (search input changing, the cart changing, another tile's own "just added" flash, the picker
+// dialog opening for a DIFFERENT product) skips it entirely — React's default shallow-compares
+// `product` (stable across re-renders that don't actually refetch the product list — React Query
+// keeps the same object reference) and `onTap`/`onOpenPicker` (single stable useCallbacks shared
+// by every tile, see PosMenu above), so this only actually re-renders when the product it
+// displays genuinely changed.
 //
 // Deliberately no <ProductImage>, no hover-lift/shadow, no backdrop-blur — this screen is used on
 // shared tablets/monoblocks for hours at a time, so every tile in the grid stays as cheap as
@@ -187,9 +217,11 @@ function CategoryButton({
 const PosProductTile = memo(function PosProductTile({
   product,
   onTap,
+  onOpenPicker,
 }: {
   product: Product;
   onTap: (product: Product, variant: ProductVariant) => void;
+  onOpenPicker: (product: Product) => void;
 }) {
   const { t } = useTranslation();
   const isWeight = product.saleType === "WEIGHT";
@@ -209,7 +241,7 @@ const PosProductTile = memo(function PosProductTile({
   }
 
   // Single variant: the whole tile is one tap target — no separate "+" button, no separate price
-  // button, tap anywhere = add 1.
+  // button, tap anywhere = add 1 (or open the weight dialog, for a WEIGHT product).
   if (singleVariant) {
     return (
       <button
@@ -230,29 +262,56 @@ const PosProductTile = memo(function PosProductTile({
   }
 
   // Multiple variants (sizes/options): which price applies is ambiguous until one is picked, so
-  // the tile itself isn't one tap target here — same lightweight inline picker as before, just
-  // without a photo above it.
+  // the whole tile opens a picker instead of adding anything directly — no price pills inside the
+  // main grid card. First choose the PRODUCT, then the variant — never the other way round.
   return (
-    <div className="flex aspect-square flex-col justify-between rounded-xl border border-ink-line bg-ink-soft p-3">
-      <span className="line-clamp-2 text-sm font-bold text-white sm:text-base">{product.name}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {product.variants.map((v) => {
-          // Seed data often uses the price itself as the variant label (e.g. "20 000"); showing
-          // both would just repeat the same number — only pair them up when the label actually
-          // carries extra information (a real size/name, not the price again).
-          const isLabelJustThePrice = v.label.replace(/\s/g, "") === formatPrice(v.price).replace(/\s/g, "");
-          return (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => handleAdd(v)}
-              className="rounded-lg bg-champ/15 px-2.5 py-1.5 text-xs font-bold text-champ transition active:scale-95"
-            >
-              {isLabelJustThePrice ? formatPrice(v.price) : `${v.label} · ${formatPrice(v.price)}`}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={() => onOpenPicker(product)}
+      aria-label={product.name}
+      className="flex aspect-square flex-col justify-between rounded-xl border border-ink-line bg-ink-soft p-3 text-left transition active:scale-95"
+    >
+      <span className="line-clamp-3 text-base font-bold text-white sm:text-lg">{product.name}</span>
+      <span className="text-lg font-extrabold text-champ sm:text-xl">{formatPriceRange(product.variants)}</span>
+    </button>
   );
 });
+
+/** Reuses the app's one shared Dialog (Escape, click-outside, portal, focus-on-open — see
+ * shared/ui/Dialog.tsx) instead of a bespoke sheet, so this gets the same proven desktop/tablet/
+ * mobile behavior as every other dialog in the app for free. Variant labels are shown exactly as
+ * stored (never invented "Small/Medium/Large" — see WHY in PosMenu's spec): when a label is just
+ * the price repeated (common in this menu's data), only the price is shown once, same convention
+ * the old inline pills already used. */
+function VariantPickerDialog({
+  product,
+  onSelect,
+  onClose,
+}: {
+  product: Product | null;
+  onSelect: (variant: ProductVariant) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={product !== null} onClose={onClose} title={product?.name ?? ""} widthClassName="max-w-sm">
+      {product && (
+        <div className="grid grid-cols-2 gap-2">
+          {product.variants.map((v) => {
+            const isLabelJustThePrice = v.label.replace(/\s/g, "") === formatPrice(v.price).replace(/\s/g, "");
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => onSelect(v)}
+                className="rounded-xl border border-ink-line bg-ink-soft px-3 py-4 text-center transition active:scale-95 hover:border-champ/50"
+              >
+                {!isLabelJustThePrice && <div className="mb-1 text-sm font-medium text-white/60">{v.label}</div>}
+                <div className="text-lg font-extrabold text-champ">{formatPrice(v.price)}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </Dialog>
+  );
+}
