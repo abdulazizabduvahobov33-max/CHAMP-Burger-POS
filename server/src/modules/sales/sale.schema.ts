@@ -14,6 +14,11 @@ export const createSaleSchema = z.object({
   // (mandatory for a SELLER's order, optional for a SUPER_ADMIN register sale), which the schema
   // can't know; enforced in sale.service.ts's createSale instead.
   tableId: z.string().min(1).optional(),
+  // Idempotency key the frontend mints once per checkout attempt (see PosCart.tsx) and resends
+  // unchanged on any retry of that same attempt — see sale.service.ts's createSale for how this
+  // makes a retried request return the original sale instead of creating a second one. Optional:
+  // a caller that doesn't send one just gets the old, non-deduplicated behavior.
+  clientRequestId: z.string().min(1).max(100).optional(),
 });
 
 export const listMySalesQuerySchema = z.object({

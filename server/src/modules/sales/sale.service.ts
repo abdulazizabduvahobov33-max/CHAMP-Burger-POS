@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
 import { newNotificationId, notificationBus } from "../../shared/notifications/notificationBus.js";
+import { isUniqueViolation } from "../../shared/utils/prismaErrors.js";
 import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { deductRecipeIngredients } from "../recipes/recipe.service.js";
 import type { SaleItemInput } from "./sale.schema.js";
@@ -122,6 +123,20 @@ export async function getMySale(id: string, sellerId: string) {
  * stay null until acceptSale runs — a sale that's only ever sent, never accepted, must have
  * zero effect on stock or reporting (see report.service.ts / report.costing.ts's `status:
  * "ACCEPTED"` filters).
+ *
+ * `clientRequestId` is an opaque idempotency key the frontend mints once per checkout attempt
+ * (see client/src/widgets/pos-cart/PosCart.tsx) and resends unchanged on any retry of that SAME
+ * attempt (network timeout, a double-tap that reaches the server before the button disables,
+ * a browser-level retry). Deliberately NOT a comparison of cart contents — two genuinely
+ * separate orders can legitimately have an identical cart, and "looks like the last one" is not
+ * a safe dedup signal. Two layers make this safe under real concurrency, not just the common
+ * case: a pre-check (cheap, handles the ordinary "already committed, client retried later" case
+ * without re-running the transaction) and — the actual guarantee — the `clientRequestId` column's
+ * unique DB constraint, which Postgres enforces atomically even when two requests race to insert
+ * the same key at the same instant; the loser's INSERT fails, its whole transaction rolls back
+ * (nothing it did partially survives), and this function fetches and returns the winner's sale
+ * instead of erroring. No in-memory Map, no time-window heuristic — this holds across a restart
+ * or a second backend instance because the guarantee lives in the database, not the process.
  */
 export async function createSale(
   locationId: string,
@@ -130,12 +145,18 @@ export async function createSale(
   cashReceived: number | undefined,
   autoAccept: boolean,
   tableId?: string,
+  clientRequestId?: string,
 ) {
   // A waiter's order must always be tied to a table — the whole point of the table system is
   // knowing where an order came from — but a register (admin, autoAccept) sale isn't necessarily
   // seated at anything, so this is only enforced for the non-autoAccept (SELLER) path.
   if (!autoAccept && !tableId) {
     throw new AppError(422, "TABLE_REQUIRED", "Выберите стол перед отправкой заказа");
+  }
+
+  if (clientRequestId) {
+    const existing = await prisma.sale.findUnique({ where: { clientRequestId } });
+    if (existing) return getSale(existing.id);
   }
 
   // Defensive: collapse accidental duplicate variantId entries in one request instead of
@@ -146,91 +167,111 @@ export async function createSale(
   }
   const variantIds = [...merged.keys()];
 
-  const saleId = await prisma.$transaction(async (tx) => {
-    if (tableId) {
-      const table = await tx.table.findFirst({ where: { id: tableId, locationId } });
-      if (!table) {
-        throw new AppError(404, "NOT_FOUND", "Стол не найден");
+  let saleId: string;
+  try {
+    saleId = await prisma.$transaction(async (tx) => {
+      if (tableId) {
+        const table = await tx.table.findFirst({ where: { id: tableId, locationId } });
+        if (!table) {
+          throw new AppError(404, "NOT_FOUND", "Стол не найден");
+        }
+        if (!table.isActive) {
+          throw new AppError(422, "TABLE_INACTIVE", "Этот стол отключён");
+        }
       }
-      if (!table.isActive) {
-        throw new AppError(422, "TABLE_INACTIVE", "Этот стол отключён");
+
+      const variants = await tx.productVariant.findMany({
+        where: { id: { in: variantIds } },
+        include: { product: true },
+      });
+      const variantMap = new Map(variants.map((v) => [v.id, v]));
+
+      for (const variantId of variantIds) {
+        const variant = variantMap.get(variantId);
+        if (!variant) {
+          throw new AppError(404, "NOT_FOUND", "Один из товаров в корзине не найден");
+        }
+        if (!variant.isActive || !variant.product.isActive) {
+          throw new AppError(422, "PRODUCT_INACTIVE", `«${variant.product.name}» больше недоступен для продажи`);
+        }
+        // Only WEIGHT-type products (sold by weight, e.g. Kefsi) are meant to take a fractional
+        // quantity — the schema itself can't express this since it doesn't know the variant's
+        // saleType without a DB lookup, so it's enforced here instead, once the variant is loaded.
+        if (variant.product.saleType !== "WEIGHT" && !Number.isInteger(merged.get(variantId))) {
+          throw new AppError(422, "INVALID_QUANTITY", `«${variant.product.name}» продаётся только целым количеством`);
+        }
       }
-    }
 
-    const variants = await tx.productVariant.findMany({
-      where: { id: { in: variantIds } },
-      include: { product: true },
-    });
-    const variantMap = new Map(variants.map((v) => [v.id, v]));
-
-    for (const variantId of variantIds) {
-      const variant = variantMap.get(variantId);
-      if (!variant) {
-        throw new AppError(404, "NOT_FOUND", "Один из товаров в корзине не найден");
-      }
-      if (!variant.isActive || !variant.product.isActive) {
-        throw new AppError(422, "PRODUCT_INACTIVE", `«${variant.product.name}» больше недоступен для продажи`);
-      }
-      // Only WEIGHT-type products (sold by weight, e.g. Kefsi) are meant to take a fractional
-      // quantity — the schema itself can't express this since it doesn't know the variant's
-      // saleType without a DB lookup, so it's enforced here instead, once the variant is loaded.
-      if (variant.product.saleType !== "WEIGHT" && !Number.isInteger(merged.get(variantId))) {
-        throw new AppError(422, "INVALID_QUANTITY", `«${variant.product.name}» продаётся только целым количеством`);
-      }
-    }
-
-    const sale = await tx.sale.create({
-      data: { sellerId, locationId, tableId, totalAmount: 0, status: autoAccept ? "ACCEPTED" : "PENDING" },
-    });
-
-    let totalAmount = new Prisma.Decimal(0);
-    for (const [variantId, quantity] of merged) {
-      const variant = variantMap.get(variantId)!;
-      const unitPrice = variant.price;
-      const subtotal = unitPrice.mul(quantity);
-      totalAmount = totalAmount.add(subtotal);
-
-      const saleItem = await tx.saleItem.create({
-        data: { saleId: sale.id, variantId, quantity, unitPrice, subtotal },
+      const sale = await tx.sale.create({
+        data: {
+          sellerId,
+          locationId,
+          tableId,
+          totalAmount: 0,
+          status: autoAccept ? "ACCEPTED" : "PENDING",
+          clientRequestId: clientRequestId ?? null,
+        },
       });
 
-      if (autoAccept) {
-        // Same recipe-deduction primitive Module 5 built and race-tested, now composed into
-        // this larger transaction instead of opening its own — see recipe.service.ts. A
-        // not-yet-accepted (PENDING) sale skips this entirely — nothing is deducted until
-        // someone actually accepts it.
-        await deductRecipeIngredients(tx, variantId, locationId, quantity, sellerId, saleItem.id);
-      }
-    }
+      let totalAmount = new Prisma.Decimal(0);
+      for (const [variantId, quantity] of merged) {
+        const variant = variantMap.get(variantId)!;
+        const unitPrice = variant.price;
+        const subtotal = unitPrice.mul(quantity);
+        totalAmount = totalAmount.add(subtotal);
 
-    let changeGiven: Prisma.Decimal | undefined;
-    if (autoAccept) {
-      // Validated against the server-computed total (never the client's pre-checkout snapshot) —
-      // the same reasoning as looking up prices fresh inside the transaction above.
-      if (cashReceived !== undefined) {
-        const received = new Prisma.Decimal(cashReceived);
-        if (received.lt(totalAmount)) {
-          throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+        const saleItem = await tx.saleItem.create({
+          data: { saleId: sale.id, variantId, quantity, unitPrice, subtotal },
+        });
+
+        if (autoAccept) {
+          // Same recipe-deduction primitive Module 5 built and race-tested, now composed into
+          // this larger transaction instead of opening its own — see recipe.service.ts. A
+          // not-yet-accepted (PENDING) sale skips this entirely — nothing is deducted until
+          // someone actually accepts it.
+          await deductRecipeIngredients(tx, variantId, locationId, quantity, sellerId, saleItem.id);
         }
-        changeGiven = received.sub(totalAmount);
       }
-    }
 
-    await tx.sale.update({
-      where: { id: sale.id },
-      data: {
-        totalAmount,
-        ...(autoAccept
-          ? {
-              acceptedAt: new Date(),
-              cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
-              changeGiven,
-            }
-          : {}),
-      },
+      let changeGiven: Prisma.Decimal | undefined;
+      if (autoAccept) {
+        // Validated against the server-computed total (never the client's pre-checkout snapshot) —
+        // the same reasoning as looking up prices fresh inside the transaction above.
+        if (cashReceived !== undefined) {
+          const received = new Prisma.Decimal(cashReceived);
+          if (received.lt(totalAmount)) {
+            throw new AppError(422, "INSUFFICIENT_PAYMENT", "Полученная сумма меньше суммы заказа");
+          }
+          changeGiven = received.sub(totalAmount);
+        }
+      }
+
+      await tx.sale.update({
+        where: { id: sale.id },
+        data: {
+          totalAmount,
+          ...(autoAccept
+            ? {
+                acceptedAt: new Date(),
+                cashReceived: cashReceived !== undefined ? new Prisma.Decimal(cashReceived) : undefined,
+                changeGiven,
+              }
+            : {}),
+        },
+      });
+      return sale.id;
     });
-    return sale.id;
-  });
+  } catch (err) {
+    if (clientRequestId && isUniqueViolation(err)) {
+      // Lost the race to a concurrent request carrying the same key — that one's transaction
+      // committed a real sale (this one's rolled back entirely, including any stock deduction it
+      // had already made before hitting the conflicting insert), so its result is what a caller
+      // asking "did my checkout go through" should see, not an error and not a second sale.
+      const winner = await prisma.sale.findUniqueOrThrow({ where: { clientRequestId } });
+      return getSale(winner.id);
+    }
+    throw err;
+  }
 
   let sale: Awaited<ReturnType<typeof getSale>>;
 
@@ -277,6 +318,15 @@ export async function createSale(
  * Same all-or-nothing transaction shape as the autoAccept branch of createSale above; if any
  * ingredient runs short between "sent" and "accepted", the whole accept is rolled back and the
  * sale stays PENDING for the admin to retry or reject.
+ *
+ * Two admins (or two tabs/devices) hitting "Принять" on the same order at nearly the same
+ * instant must deduct stock exactly once, not twice — the initial status check above reads
+ * without locking anything, so two concurrent transactions can both see PENDING before either
+ * commits. The `tx.sale.updateMany({ where: { status: "PENDING" }, ... })` below is what actually
+ * closes that race: Postgres locks the row for the duration of whichever UPDATE gets there
+ * first, and the second one's WHERE re-evaluates against the now-committed "ACCEPTED" status once
+ * it's unblocked — so its `count` comes back 0 and it stops there, before ever reaching the
+ * stock-deduction loop. Same pattern as deductRecipeIngredients' own per-ingredient stock check.
  */
 export async function acceptSale(locationId: string, id: string, cashReceived?: number) {
   const sellerId = await prisma.$transaction(async (tx) => {
@@ -291,10 +341,6 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
       throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
     }
 
-    for (const item of sale.items) {
-      await deductRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), sale.sellerId, item.id);
-    }
-
     let changeGiven: Prisma.Decimal | undefined;
     if (cashReceived !== undefined) {
       const received = new Prisma.Decimal(cashReceived);
@@ -304,8 +350,8 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
       changeGiven = received.sub(sale.totalAmount);
     }
 
-    await tx.sale.update({
-      where: { id: sale.id },
+    const claimed = await tx.sale.updateMany({
+      where: { id: sale.id, status: "PENDING" },
       data: {
         status: "ACCEPTED",
         acceptedAt: new Date(),
@@ -313,6 +359,13 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
         changeGiven,
       },
     });
+    if (claimed.count === 0) {
+      throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
+    }
+
+    for (const item of sale.items) {
+      await deductRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), sale.sellerId, item.id);
+    }
 
     return sale.sellerId;
   });
@@ -339,6 +392,10 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
  * creation time (stock, payment) for a PENDING sale — so unlike acceptSale, there's nothing to
  * roll back or compensate, just a status flip. The seller who sent it gets notified so they know
  * to follow up with the customer rather than assuming it's quietly on its way.
+ *
+ * Same atomic-claim shape as acceptSale — a concurrent reject/accept race (two admins, or one of
+ * each) must resolve to exactly one outcome, not one action silently overwriting the other's
+ * already-returned result.
  */
 export async function rejectSale(locationId: string, id: string) {
   const sellerId = await prisma.$transaction(async (tx) => {
@@ -350,7 +407,11 @@ export async function rejectSale(locationId: string, id: string) {
       throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
     }
 
-    await tx.sale.update({ where: { id: sale.id }, data: { status: "REJECTED" } });
+    const claimed = await tx.sale.updateMany({ where: { id: sale.id, status: "PENDING" }, data: { status: "REJECTED" } });
+    if (claimed.count === 0) {
+      throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
+    }
+
     return sale.sellerId;
   });
 

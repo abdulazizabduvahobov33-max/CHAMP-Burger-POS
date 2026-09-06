@@ -364,6 +364,14 @@ model Sale {
   cancelledBy   User?      @relation("SaleCancelledBy", fields: [cancelledById], references: [id])
   cancelReason  String?
 
+  // Client-generated idempotency key (a UUID minted once per checkout attempt — see
+  // client/src/widgets/pos-cart/PosCart.tsx). Nullable: existing rows and any caller that
+  // doesn't supply one are unaffected — a NULL never conflicts with another NULL under Postgres
+  // unique-index semantics, so this is purely additive. createSale() relies on this column's
+  // uniqueness (not an application-level check-then-insert, which would race) to make a retried
+  // request return the SAME sale instead of creating a second one — see its comment.
+  clientRequestId String? @unique
+
   items      SaleItem[]
   changeLogs SaleChangeLog[]
 

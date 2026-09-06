@@ -40,6 +40,13 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
   // or a customer asks again a minute later. Persists for the rest of the session, not on a timer.
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const receiptTimeoutRef = useRef<number>();
+  // Idempotency key for the in-progress checkout attempt — minted once when the payment dialog
+  // opens, reused unchanged across any retry within that SAME attempt (the dialog stays open on
+  // error; tapping "Оплатить" again must resend the identical id, not a fresh one, or the server
+  // has no way to tell a genuine retry apart from a second real order). Cleared back to null on
+  // success or on closing the dialog without one — either way, the NEXT checkout is a new attempt
+  // and gets a new id. See server/.../sale.service.ts's createSale for the backend half of this.
+  const checkoutIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => window.clearTimeout(receiptTimeoutRef.current);
@@ -56,6 +63,7 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
 
   function handlePaymentConfirm(cashReceived: number) {
     if (lines.length === 0 || createSale.isPending) return;
+    checkoutIdRef.current ??= crypto.randomUUID();
     setCheckoutError(null);
     setLastReceiptTotal(null);
     createSale.mutate(
@@ -63,9 +71,11 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
         items: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
         cashReceived,
         tableId: tableId ?? undefined,
+        clientRequestId: checkoutIdRef.current,
       },
       {
         onSuccess: (sale) => {
+          checkoutIdRef.current = null;
           clear();
           setPaymentOpen(false);
           // Show what the server actually charged, not the cart's pre-checkout snapshot —
@@ -152,7 +162,13 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
 
       <PaymentDialog
         open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
+        onClose={() => {
+          // Cancelling (not a failed attempt — see onSuccess/onError above) means whatever comes
+          // next is a fresh checkout intent, possibly on an edited cart: it must get a new id, not
+          // silently reuse this abandoned attempt's.
+          checkoutIdRef.current = null;
+          setPaymentOpen(false);
+        }}
         total={total}
         isPending={createSale.isPending}
         error={checkoutError}

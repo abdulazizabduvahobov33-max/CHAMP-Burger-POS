@@ -16,6 +16,7 @@ export async function create(req: Request, res: Response) {
     input.cashReceived,
     autoAccept,
     input.tableId,
+    input.clientRequestId,
   );
   res.status(201).json({ sale });
 }
