@@ -37,15 +37,37 @@ const multiVariantProduct = {
   ],
 };
 
+const drinkProduct = {
+  id: "prod-drink",
+  name: "Cola",
+  categoryId: "cat-2",
+  categoryName: "Напитки",
+  imageUrl: null,
+  saleType: "UNIT" as const,
+  isActive: true,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  variants: [{ id: "variant-drink", label: "Бутылка", price: "5000" }],
+};
+
 vi.mock("@/entities/product/api", () => ({
   useProducts: () => ({
-    data: { items: [singleVariantProduct, multiVariantProduct], total: 2, page: 1, pageSize: 100 },
+    data: { items: [singleVariantProduct, multiVariantProduct, drinkProduct], total: 3, page: 1, pageSize: 100 },
     isLoading: false,
   }),
 }));
 
+// Three categories, only two of which actually have a product above — "Десерты" is deliberately
+// empty to test that an empty category never renders a heading with nothing under it. Order here
+// is what the API would already return (pre-sorted by sortOrder) — PosMenu must preserve it, not
+// re-sort.
 vi.mock("@/entities/category/api", () => ({
-  useCategories: () => ({ data: [{ id: "cat-1", name: "Прочее" }] }),
+  useCategories: () => ({
+    data: [
+      { id: "cat-1", name: "Прочее" },
+      { id: "cat-2", name: "Напитки" },
+      { id: "cat-3", name: "Десерты" },
+    ],
+  }),
 }));
 
 import { PosMenu } from "./PosMenu";
@@ -160,5 +182,78 @@ describe("PosMenu — Cashier multi-variant UX", () => {
     await user.click(screen.getByRole("button", { name: "Хот-дог" }));
 
     expect(container.querySelectorAll("img")).toHaveLength(0);
+  });
+});
+
+describe("PosMenu — category grouping (Barchasi/Все)", () => {
+  beforeEach(() => {
+    useCartStore.setState({ lines: [], tableId: null });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("Barchasi shows a heading per category, each with only its own products", () => {
+    render(<PosMenu />);
+
+    const sections = screen.getAllByRole("heading", { level: 2 });
+    const headingNames = sections.map((h) => h.textContent);
+    // "Десерты" has no products in these fixtures — must not appear at all.
+    expect(headingNames).toEqual(["Прочее", "Напитки"]);
+
+    const prochee = screen.getByRole("heading", { name: "Прочее" }).closest("section")!;
+    expect(within(prochee).getByRole("button", { name: "Лаваш" })).toBeInTheDocument();
+    expect(within(prochee).getByRole("button", { name: "Хот-дог" })).toBeInTheDocument();
+    expect(within(prochee).queryByRole("button", { name: "Cola" })).not.toBeInTheDocument();
+
+    const napitki = screen.getByRole("heading", { name: "Напитки" }).closest("section")!;
+    expect(within(napitki).getByRole("button", { name: "Cola" })).toBeInTheDocument();
+    expect(within(napitki).queryByRole("button", { name: "Лаваш" })).not.toBeInTheDocument();
+  });
+
+  it("an empty category never renders a heading (it can still appear as a category filter button)", () => {
+    render(<PosMenu />);
+    expect(screen.queryByRole("heading", { name: "Десерты" })).not.toBeInTheDocument();
+    // The filter button itself legitimately lists every category regardless of product count.
+    expect(screen.getByRole("button", { name: "Десерты" })).toBeInTheDocument();
+  });
+
+  it("selecting a specific category shows only its products, no headings, no grouping", async () => {
+    const user = userEvent.setup();
+    render(<PosMenu />);
+
+    await user.click(screen.getByRole("button", { name: "Напитки" }));
+
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Cola" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Лаваш" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Хот-дог" })).not.toBeInTheDocument();
+  });
+
+  it("search within Barchasi keeps results grouped by category and hides categories with no match", async () => {
+    const user = userEvent.setup();
+    render(<PosMenu />);
+
+    await user.type(screen.getByPlaceholderText(/Поиск товаров/i), "лав"); // matches only "Лаваш"
+
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(["Прочее"]);
+    expect(screen.getByRole("button", { name: "Лаваш" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Хот-дог" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cola" })).not.toBeInTheDocument();
+  });
+
+  it("multi-variant selector still works from within a grouped section", async () => {
+    const user = userEvent.setup();
+    render(<PosMenu />);
+
+    await user.click(screen.getByRole("button", { name: "Хот-дог" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.click(within(screen.getByRole("dialog")).getByText("Большой"));
+
+    expect(useCartStore.getState().lines).toEqual([
+      expect.objectContaining({ variantId: "variant-large", quantity: 1 }),
+    ]);
   });
 });

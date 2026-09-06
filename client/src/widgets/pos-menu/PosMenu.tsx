@@ -21,6 +21,15 @@ import { SkeletonPosTile } from "@/shared/ui/Skeleton";
 // image requests on this screen, regardless of catalog size.
 const CATALOG_PAGE_SIZE = 100;
 
+// Tuned for the actual tablet range (~600-1100px), not just Tailwind's default sm/md/lg jumps
+// (640/768/1024/1280) — those land awkwardly on real device widths (e.g. a 1024-wide landscape
+// tablet sits exactly on the lg boundary). Combined with the tile itself having no forced aspect
+// ratio (see PosProductTile), more columns at a given width means each one gets narrower instead
+// of the tile staying square and growing tall — that's what actually fixes "cards too big on
+// tablet", not the column count alone.
+const GRID_CLASSNAME =
+  "grid grid-cols-2 gap-2.5 min-[500px]:grid-cols-3 min-[700px]:grid-cols-4 min-[900px]:grid-cols-5 min-[1100px]:grid-cols-6 sm:gap-3";
+
 export function PosMenu() {
   const { t } = useTranslation();
   const [searchInput, setSearchInput] = useState("");
@@ -45,6 +54,26 @@ export function PosMenu() {
       return true;
     });
   }, [allProducts, categoryId, searchInput]);
+
+  // Only grouped in the "Все" view (no specific category picked) — a single category's own grid
+  // is already homogeneous, grouping it would just print one redundant heading. Category order
+  // and each category's product order both come pre-sorted by sortOrder from the API (same
+  // ordering already used for the category pills and for a single-category grid) — grouping here
+  // is purely a re-bucketing of the already-filtered `products` array, never a re-sort. Empty
+  // categories (no match, e.g. after a search) are dropped rather than shown with nothing under
+  // the heading.
+  const groups = useMemo(() => {
+    if (categoryId || !categories) return null;
+    const byCategory = new Map<string, Product[]>();
+    for (const p of products) {
+      const list = byCategory.get(p.categoryId);
+      if (list) list.push(p);
+      else byCategory.set(p.categoryId, [p]);
+    }
+    return categories
+      .map((c) => ({ category: c, products: byCategory.get(c.id) ?? [] }))
+      .filter((g) => g.products.length > 0);
+  }, [products, categories, categoryId]);
 
   // A WEIGHT product never goes straight into the cart on tap — the price depends on how much of
   // it is being sold, which nobody knows yet at click time. Opens the weight dialog instead (see
@@ -108,7 +137,7 @@ export function PosMenu() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-ink-line p-4">
+      <div className="shrink-0 border-b border-ink-line p-3 sm:p-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <input
@@ -131,7 +160,7 @@ export function PosMenu() {
           )}
         </div>
 
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-2.5 flex gap-1.5 overflow-x-auto pb-1 sm:mt-3 sm:gap-2">
           <CategoryButton active={categoryId === ""} onClick={() => setCategoryId("")}>
             {t("pos.allCategories")}
           </CategoryButton>
@@ -143,9 +172,9 @@ export function PosMenu() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
         {isLoading && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className={GRID_CLASSNAME}>
             {Array.from({ length: 12 }).map((_, i) => (
               <SkeletonPosTile key={i} />
             ))}
@@ -160,8 +189,25 @@ export function PosMenu() {
           />
         )}
 
-        {!isLoading && products.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {!isLoading && groups && groups.length > 0 && (
+          <div className="space-y-5 sm:space-y-6">
+            {groups.map(({ category, products: categoryProducts }) => (
+              <section key={category.id}>
+                <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wide text-white/50 sm:mb-3 sm:text-sm">
+                  {category.name}
+                </h2>
+                <div className={GRID_CLASSNAME}>
+                  {categoryProducts.map((product) => (
+                    <PosProductTile key={product.id} product={product} onTap={handleTap} onOpenPicker={handleOpenPicker} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && !groups && products.length > 0 && (
+          <div className={GRID_CLASSNAME}>
             {products.map((product) => (
               <PosProductTile key={product.id} product={product} onTap={handleTap} onOpenPicker={handleOpenPicker} />
             ))}
@@ -193,7 +239,7 @@ function CategoryButton({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-xl px-5 py-3 text-sm font-bold transition active:scale-95 ${
+      className={`shrink-0 rounded-xl px-3.5 py-2.5 text-xs font-bold transition active:scale-95 sm:px-5 sm:py-3 sm:text-sm ${
         active ? "bg-champ text-onaccent" : "bg-ink-soft text-white/70"
       }`}
     >
@@ -214,6 +260,12 @@ function CategoryButton({
 // shared tablets/monoblocks for hours at a time, so every tile in the grid stays as cheap as
 // possible to paint. The only transition here is a plain 150ms border/background color swap for
 // the tap flash and a `active:scale-95` press feedback, both compositor-cheap.
+//
+// Deliberately NO aspect-square / fixed height: a tile's height comes from its own content
+// (name capped at 2 lines + one price line, both via a modest min-height for a comfortable touch
+// target) instead of being forced to match its column's width. That decoupling is what actually
+// keeps tiles compact on tablet widths — more columns there means each one gets NARROWER, not
+// square-and-therefore-taller.
 const PosProductTile = memo(function PosProductTile({
   product,
   onTap,
@@ -248,12 +300,12 @@ const PosProductTile = memo(function PosProductTile({
         type="button"
         onClick={() => handleAdd(singleVariant)}
         aria-label={product.name}
-        className={`flex aspect-square flex-col justify-between rounded-xl border p-3 text-left transition active:scale-95 ${
+        className={`flex min-h-[76px] flex-col justify-between gap-1 rounded-xl border p-2.5 text-left transition active:scale-95 sm:min-h-[86px] sm:p-3 ${
           justAdded ? "border-success bg-success/10" : "border-ink-line bg-ink-soft"
         }`}
       >
-        <span className="line-clamp-3 text-base font-bold text-white sm:text-lg">{product.name}</span>
-        <span className="text-lg font-extrabold text-champ sm:text-xl">
+        <span className="line-clamp-2 text-sm font-bold text-white sm:text-base">{product.name}</span>
+        <span className="text-base font-extrabold text-champ sm:text-lg">
           {formatPrice(singleVariant.price)}
           {isWeight && <span className="text-xs font-semibold text-champ/60"> {t("pos.weight.perKgSuffix")}</span>}
         </span>
@@ -269,10 +321,10 @@ const PosProductTile = memo(function PosProductTile({
       type="button"
       onClick={() => onOpenPicker(product)}
       aria-label={product.name}
-      className="flex aspect-square flex-col justify-between rounded-xl border border-ink-line bg-ink-soft p-3 text-left transition active:scale-95"
+      className="flex min-h-[76px] flex-col justify-between gap-1 rounded-xl border border-ink-line bg-ink-soft p-2.5 text-left transition active:scale-95 sm:min-h-[86px] sm:p-3"
     >
-      <span className="line-clamp-3 text-base font-bold text-white sm:text-lg">{product.name}</span>
-      <span className="text-lg font-extrabold text-champ sm:text-xl">{formatPriceRange(product.variants)}</span>
+      <span className="line-clamp-2 text-sm font-bold text-white sm:text-base">{product.name}</span>
+      <span className="text-base font-extrabold text-champ sm:text-lg">{formatPriceRange(product.variants)}</span>
     </button>
   );
 });

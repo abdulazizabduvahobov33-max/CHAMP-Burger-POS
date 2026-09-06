@@ -72,7 +72,9 @@ export default function SellerPosPage() {
           <TablePicker selectedTableId={tableId} onSelect={setTable} />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[1fr_380px]">
+        // Same clamp()-based cart width as AdminPosPage — see its comment: a flat 380px left a
+        // 1024-1279px landscape tablet with over a third of the screen spent on the cart.
+        <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[1fr_clamp(260px,26vw,380px)]">
           <div className="min-h-0 min-w-0 flex-1 lg:border-r lg:border-ink-line [padding-bottom:calc(4rem+env(safe-area-inset-bottom))] lg:[padding-bottom:0px]">
             <PosMenu />
           </div>
