@@ -10,6 +10,7 @@ import { prisma } from "./config/db.js";
 import { AppError, errorHandler, notFoundHandler } from "./middleware/error.js";
 import { authenticate } from "./middleware/authenticate.js";
 import { authorize } from "./middleware/authorize.js";
+import { requestTimingLogger } from "./middleware/requestTiming.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import ingredientRoutes from "./modules/ingredients/ingredient.routes.js";
 import categoryRoutes from "./modules/categories/category.routes.js";
@@ -71,6 +72,12 @@ export function createApp() {
   // gets Apache-style combined logs so a process manager (Docker/PM2/systemd) can capture
   // them like any other 12-factor app; nothing here writes to a file directly.
   app.use(morgan(env.isProd ? "combined" : "dev"));
+  // Separate from morgan above (which logs every request either way) — this one stays silent
+  // unless a request is slow enough to actually matter, so a "grep for SLOW" over the log
+  // stream finds real problems without wading through normal traffic. See its own file for why
+  // it currently fires on nearly every request (the region-latency issue this was added to
+  // investigate, not a bug in the middleware itself).
+  app.use(requestTimingLogger);
 
   // Basic rate limiting (tightened per-route in later modules)
   app.use(
