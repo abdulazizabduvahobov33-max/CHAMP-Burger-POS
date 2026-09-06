@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { useCreateSale } from "@/entities/sale/api";
 import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import type { Sale } from "@/entities/sale/model";
-import { ProductImage } from "@/entities/product/ui/ProductImage";
 import { WeightEntryDialog } from "@/features/pos-weight-entry/WeightEntryDialog";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -314,8 +313,6 @@ function CartLineRow({
 
   return (
     <div className="flex animate-fade-in items-center gap-3 rounded-xl border border-ink-line bg-ink-soft p-3">
-      <ProductImage src={line.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg" />
-
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{line.productName}</p>
         <p className="truncate text-xs text-white/40">

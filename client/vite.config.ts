@@ -47,6 +47,26 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Without this, every route (including /login, which React.lazy() already keeps out of
+        // the other page bundles — see app/routes.tsx) still pulls in one shared "everything
+        // else" chunk containing react/react-dom/router/react-query/zustand/axios/i18next, since
+        // Rollup's default single-vendor-chunk behavior doesn't split further on its own. Splitting
+        // these into their own chunks means: (1) that shared code is cache-stable across deploys
+        // (it only changes when a dependency version bumps, not on every app-code change, so
+        // returning users re-download less), and (2) the framework/runtime chunk and the
+        // data/state-layer chunk can load in parallel instead of as one monolithic blob. Pure
+        // build output shape — no runtime/behavior change.
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-data": ["@tanstack/react-query", "zustand", "axios"],
+          "vendor-i18n": ["i18next", "react-i18next", "i18next-browser-languagedetector"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     // Proxy /api to the backend during development so the client can call

@@ -232,13 +232,23 @@ export async function createSale(
     return sale.id;
   });
 
-  const sale = await getSale(saleId);
+  let sale: Awaited<ReturnType<typeof getSale>>;
 
-  if (!autoAccept) {
-    // Fire-and-forget: this is a best-effort real-time nudge, not part of the sale's own
-    // correctness — if nobody's connected right now, the order still sits in listPendingSales()
-    // for the admin to find on their next visit either way. See notificationBus.ts.
-    const seller = await prisma.user.findUnique({ where: { id: sellerId }, select: { name: true } });
+  if (autoAccept) {
+    sale = await getSale(saleId);
+  } else {
+    // getSale(saleId) and the seller name lookup depend on nothing but already-known ids
+    // (saleId, sellerId) — neither result feeds the other — so they run concurrently instead of
+    // one after the other; each DB round trip has the same fixed latency regardless of query
+    // complexity, so this halves the wait for exactly the round trip count it removes.
+    const [saleResult, seller] = await Promise.all([
+      getSale(saleId),
+      // Fire-and-forget: this is a best-effort real-time nudge, not part of the sale's own
+      // correctness — if nobody's connected right now, the order still sits in listPendingSales()
+      // for the admin to find on their next visit either way. See notificationBus.ts.
+      prisma.user.findUnique({ where: { id: sellerId }, select: { name: true } }),
+    ]);
+    sale = saleResult;
     notificationBus.publish(locationId, {
       id: newNotificationId(),
       type: "order.new",

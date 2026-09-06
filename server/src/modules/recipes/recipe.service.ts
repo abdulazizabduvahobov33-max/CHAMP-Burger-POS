@@ -99,6 +99,16 @@ export async function deductRecipeIngredients(
   }
 
   const results: DeductedLine[] = [];
+  // Each stock check must stay its own awaited, sequential updateMany — that conditional
+  // (`quantity: { gte: amount }`) is what stops two concurrent sales from both passing a stale
+  // sufficiency check and driving stock negative, so this loop can't be parallelized or
+  // reordered. The audit-log write below has no such constraint (nothing downstream reads a
+  // movement's own id, and every line's movement only depends on ITS OWN already-committed
+  // deduction, not on any sibling movement) — so those are collected here and written in one
+  // batched `createMany` after the loop, instead of one `create` per line, to cut this down from
+  // 2N round trips to N+1 without changing which rows end up written or the all-or-nothing
+  // transaction guarantee (a throw here still aborts before the batched write ever runs).
+  const movements: Prisma.StockMovementCreateManyInput[] = [];
 
   for (const line of lines) {
     const amount = line.quantity.mul(saleQuantity);
@@ -112,19 +122,19 @@ export async function deductRecipeIngredients(
       throw new AppError(422, "INSUFFICIENT_STOCK", `Недостаточно на складе: ${line.ingredient.name}`);
     }
 
-    await tx.stockMovement.create({
-      data: {
-        ingredientId: line.ingredientId,
-        locationId,
-        change: amount.negated(),
-        reason: "SALE",
-        referenceId,
-        createdById: userId,
-      },
+    movements.push({
+      ingredientId: line.ingredientId,
+      locationId,
+      change: amount.negated(),
+      reason: "SALE",
+      referenceId,
+      createdById: userId,
     });
 
     results.push({ ingredientId: line.ingredientId, ingredientName: line.ingredient.name, amount: amount.toString() });
   }
+
+  await tx.stockMovement.createMany({ data: movements });
 
   return results;
 }
@@ -152,6 +162,9 @@ export async function restockRecipeIngredients(
   }
 
   const results: DeductedLine[] = [];
+  // Same batching as deductRecipeIngredients above: no per-line sufficiency check to protect
+  // here (restocking never fails), so there's even less reason to write these one at a time.
+  const movements: Prisma.StockMovementCreateManyInput[] = [];
 
   for (const line of lines) {
     const amount = line.quantity.mul(saleQuantity);
@@ -161,19 +174,19 @@ export async function restockRecipeIngredients(
       data: { quantity: { increment: amount } },
     });
 
-    await tx.stockMovement.create({
-      data: {
-        ingredientId: line.ingredientId,
-        locationId,
-        change: amount,
-        reason: "ADJUST",
-        referenceId,
-        createdById: userId,
-      },
+    movements.push({
+      ingredientId: line.ingredientId,
+      locationId,
+      change: amount,
+      reason: "ADJUST",
+      referenceId,
+      createdById: userId,
     });
 
     results.push({ ingredientId: line.ingredientId, ingredientName: line.ingredient.name, amount: amount.toString() });
   }
+
+  await tx.stockMovement.createMany({ data: movements });
 
   return results;
 }

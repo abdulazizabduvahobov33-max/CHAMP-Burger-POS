@@ -30,7 +30,7 @@ export function SkeletonStatCard() {
   );
 }
 
-/** Matches ProductsTable/PosMenu's image-card shape. */
+/** Matches ProductsTable's image-card shape. */
 export function SkeletonProductCard() {
   return (
     <div className="overflow-hidden rounded-xl border border-ink-line bg-ink-soft">
@@ -39,6 +39,17 @@ export function SkeletonProductCard() {
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
       </div>
+    </div>
+  );
+}
+
+/** Matches the Cashier screen's photo-less tile (PosMenu) — no image block, since that page
+ * never loads product photos over the network at all. */
+export function SkeletonPosTile() {
+  return (
+    <div className="flex aspect-square flex-col justify-between rounded-xl border border-ink-line bg-ink-soft p-3">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-5 w-1/2" />
     </div>
   );
 }
