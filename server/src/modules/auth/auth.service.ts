@@ -49,14 +49,19 @@ async function issueTokens(user: User): Promise<SessionTokens> {
   return { accessToken, refreshToken };
 }
 
+// A syntactically valid bcrypt hash of a string nobody will ever type — used only so a
+// nonexistent-login attempt still pays bcrypt's ~cost-10 compute time below, same as a real
+// user's wrong-password attempt. Without this, "no such user" returns in ~1ms (short-circuits
+// before ever calling bcrypt.compare) while "wrong password for a real user" takes ~50-90ms —
+// a measurable timing side-channel that reveals whether a login exists even though both cases
+// return the identical error message (proven empirically: prisma/authTimingCheck.ts).
+const DUMMY_HASH_FOR_TIMING_PARITY = bcrypt.hashSync("no-such-user-timing-parity", 10);
+
 export async function login(loginValue: string, password: string) {
   const user = await prisma.user.findUnique({ where: { login: loginValue } });
-  if (!user || !user.isActive) {
-    throw new AppError(401, "INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE);
-  }
 
-  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-  if (!passwordMatches) {
+  const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH_FOR_TIMING_PARITY);
+  if (!user || !user.isActive || !passwordMatches) {
     throw new AppError(401, "INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE);
   }
 
