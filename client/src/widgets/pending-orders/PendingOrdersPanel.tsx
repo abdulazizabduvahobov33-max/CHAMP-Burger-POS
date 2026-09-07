@@ -12,6 +12,7 @@ import { toast } from "@/shared/stores/toastStore";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { Dialog } from "@/shared/ui/Dialog";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { ErrorState } from "@/shared/ui/ErrorState";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -38,7 +39,7 @@ export function PendingOrdersPanel({
   canReject?: boolean;
 }) {
   const { t } = useTranslation();
-  const { data: pending, isLoading } = usePendingSales();
+  const { data: pending, isLoading, isError, refetch } = usePendingSales();
   const acceptSale = useAcceptSale();
   const rejectSale = useRejectSale();
   const { printReceipt } = usePrintReceipt();
@@ -82,11 +83,16 @@ export function PendingOrdersPanel({
           </div>
         )}
 
-        {!isLoading && (!pending || pending.length === 0) && (
+        {/* Checked before the empty-state branch — a failed fetch also leaves `pending`
+            undefined, and showing "no pending orders" in that case would hide a real
+            network/server error from whoever's watching this queue. */}
+        {!isLoading && isError && <ErrorState message={t("pos.pending.loadError")} onRetry={() => void refetch()} />}
+
+        {!isLoading && !isError && (!pending || pending.length === 0) && (
           <EmptyState icon={ShoppingBag} title={t("pos.pending.emptyTitle")} description={t("pos.pending.emptyDescription")} />
         )}
 
-        {!isLoading && pending && pending.length > 0 && (
+        {!isLoading && !isError && pending && pending.length > 0 && (
           <div className="max-h-[65vh] space-y-2 overflow-y-auto">
             {pending.map((sale) => (
               <PendingOrderRow

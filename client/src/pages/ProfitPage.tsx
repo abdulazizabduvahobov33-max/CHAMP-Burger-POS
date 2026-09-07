@@ -10,6 +10,7 @@ import { ThemeToggleButton } from "@/shared/ui/ThemeToggleButton";
 import { BrandMark } from "@/shared/ui/BrandMark";
 import { DateRangeFilter } from "@/features/report-date-filter/DateRangeFilter";
 import { useProfitSummary } from "@/entities/report/api";
+import { ErrorState } from "@/shared/ui/ErrorState";
 import { formatPrice, profitColorClass } from "@/entities/product/lib";
 import { isDateFilterReady, type DateFilter } from "@/entities/report/model";
 import { ProductProfitabilityTable } from "@/widgets/product-profitability/ProductProfitabilityTable";
@@ -58,7 +59,7 @@ export default function ProfitPage() {
 
 function ProfitSummaryStrip({ filter }: { filter: DateFilter }) {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useProfitSummary(filter);
+  const { data, isLoading, isError, refetch } = useProfitSummary(filter);
   const rangeIncomplete = !isDateFilterReady(filter);
 
   if (rangeIncomplete) {
@@ -71,9 +72,9 @@ function ProfitSummaryStrip({ filter }: { filter: DateFilter }) {
 
   if (isError) {
     return (
-      <p role="alert" className="rounded-card bg-ink-card p-4 text-center text-sm text-danger-soft shadow-card">
-        {t("profit.loadError")}
-      </p>
+      <div className="rounded-card bg-ink-card shadow-card">
+        <ErrorState compact message={t("profit.loadError")} onRetry={() => void refetch()} />
+      </div>
     );
   }
 

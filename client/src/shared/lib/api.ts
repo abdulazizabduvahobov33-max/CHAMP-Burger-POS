@@ -25,10 +25,19 @@ if (import.meta.env.PROD && baseURL === "/api") {
   );
 }
 
+// No request should be able to hang indefinitely — without this, a sleeping Render backend or a
+// genuinely stuck connection shows the user a spinner that never resolves (the browser's own
+// default is effectively "forever" for XHR/fetch). 20s comfortably covers a WARM backend's
+// slowest real request; it's deliberately NOT sized to cover a full ~60s Render cold start —
+// see AuthBootstrap.tsx, which gives its own one bootstrap-time request a separately configured
+// longer budget instead of raising this default for every request in the app.
+const DEFAULT_TIMEOUT_MS = 20_000;
+
 /** Shared axios instance. Attaches the access token and silently refreshes it on 401. */
 export const api = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: DEFAULT_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -54,10 +63,15 @@ let refreshPromise: Promise<string | null> | null = null;
  * of each spending the same refresh token — the second caller would get a
  * 401 for an already-revoked token and wipe out the session the first
  * caller just established.
+ *
+ * `timeoutMs` lets ONE caller (AuthBootstrap, on first app load) opt into a much longer budget
+ * to ride out a Render free-tier cold start, without raising DEFAULT_TIMEOUT_MS for every other
+ * request in the app. Ignored if a refresh is already in flight (the in-flight call's own
+ * timeout wins) — single-flight means there's only ever one real request to configure anyway.
  */
-export function refreshAccessToken(): Promise<string | null> {
+export function refreshAccessToken(timeoutMs?: number): Promise<string | null> {
   refreshPromise ??= api
-    .post<{ accessToken: string; user: AuthUser }>("/auth/refresh")
+    .post<{ accessToken: string; user: AuthUser }>("/auth/refresh", undefined, timeoutMs ? { timeout: timeoutMs } : undefined)
     .then(({ data }) => {
       useAuthStore.getState().setSession(data.user, data.accessToken);
       return data.accessToken;

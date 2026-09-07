@@ -7,7 +7,7 @@ import { formatPrice, formatSaleQuantity } from "@/entities/product/lib";
 import type { Sale } from "@/entities/sale/model";
 import { WeightEntryDialog } from "@/features/pos-weight-entry/WeightEntryDialog";
 import { PaymentDialog } from "@/features/pos-payment/PaymentDialog";
-import { getErrorMessage } from "@/shared/lib/errors";
+import { getErrorMessage, isIndeterminateError } from "@/shared/lib/errors";
 import { usePrintReceipt } from "@/shared/printing/usePrintReceipt";
 import { useCartStore, type CartLine } from "@/shared/stores/cartStore";
 import { useWeightEntryStore } from "@/shared/stores/weightEntryStore";
@@ -95,7 +95,16 @@ export function PosCart({ mode = "send" }: { mode?: PosCartMode } = {}) {
             if (mode === "accept") void handlePrint(sale);
           }
         },
-        onError: (err) => setCheckoutError(getErrorMessage(err, t("pos.saleFailed"))),
+        onError: (err) => {
+          // A timeout/network error means the request never got an answer at all — the sale may
+          // have actually gone through server-side (see sale.service.ts's createSale). The cart
+          // deliberately isn't cleared (only onSuccess above does that) and checkoutIdRef isn't
+          // reset, so tapping "Отправить"/"Оформить" again resends the SAME clientRequestId —
+          // the server either returns the already-created sale or creates it for the first time,
+          // never a duplicate. A real 4xx/5xx the server DID answer with is a genuine failure —
+          // that one keeps the normal per-error message.
+          setCheckoutError(isIndeterminateError(err) ? t("pos.checkoutUnknownStatus") : getErrorMessage(err, t("pos.saleFailed")));
+        },
       },
     );
   }

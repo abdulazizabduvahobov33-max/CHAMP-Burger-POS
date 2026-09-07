@@ -2,17 +2,18 @@ import { useTranslation } from "react-i18next";
 
 import { useDashboardSummary } from "@/entities/report/api";
 import { formatPrice, profitColorClass } from "@/entities/product/lib";
+import { ErrorState } from "@/shared/ui/ErrorState";
 import { SkeletonStatCard } from "@/shared/ui/Skeleton";
 
 export function DashboardStats() {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useDashboardSummary();
+  const { data, isLoading, isError, refetch } = useDashboardSummary();
 
   if (isError) {
     return (
-      <p role="alert" className="rounded-card bg-ink-card p-4 text-sm text-danger-soft shadow-card sm:p-5">
-        {t("dashboard.statsLoadError")}
-      </p>
+      <div className="rounded-card bg-ink-card shadow-card">
+        <ErrorState compact message={t("dashboard.statsLoadError")} onRetry={() => void refetch()} />
+      </div>
     );
   }
 

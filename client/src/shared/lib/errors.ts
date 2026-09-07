@@ -33,6 +33,20 @@ export function getErrorMessage(error: unknown, fallback = i18n.t("common.generi
     }
 
     if (error.code === "ERR_NETWORK") return i18n.t("common.networkError");
+    // Axios's own client-side timeout (see DEFAULT_TIMEOUT_MS in shared/lib/api.ts) — the
+    // request never got a response at all, so this is NOT "invalid input" or "access denied";
+    // conflating it with the generic/fallback message (as before this existed) is exactly how a
+    // cold-start timeout on the login screen used to read as "Не удалось войти", implying a
+    // credentials problem that isn't what actually happened.
+    if (error.code === "ECONNABORTED") return i18n.t("common.timeoutError");
   }
   return fallback;
+}
+
+/** True for the two axios error shapes that mean "we don't actually know what happened server-
+ * side" (no response ever arrived) — as opposed to a 4xx/5xx the server DID answer with. Used
+ * wherever the caller needs to tell "definitely failed" apart from "status unknown" (see
+ * PosCart.tsx's checkout error handling). */
+export function isIndeterminateError(error: unknown): boolean {
+  return error instanceof AxiosError && (error.code === "ECONNABORTED" || error.code === "ERR_NETWORK");
 }

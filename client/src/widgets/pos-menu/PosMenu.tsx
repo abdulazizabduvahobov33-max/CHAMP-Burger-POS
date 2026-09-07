@@ -10,6 +10,7 @@ import { Dialog } from "@/shared/ui/Dialog";
 import { useCartStore } from "@/shared/stores/cartStore";
 import { useWeightEntryStore } from "@/shared/stores/weightEntryStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { ErrorState } from "@/shared/ui/ErrorState";
 import { SkeletonPosTile } from "@/shared/ui/Skeleton";
 
 // The cashier screen is deliberately architected differently from ProductsTable's server-side
@@ -39,7 +40,7 @@ export function PosMenu() {
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
 
   const { data: categories } = useCategories();
-  const { data, isLoading } = useProducts({ isActive: true, page: 1, pageSize: CATALOG_PAGE_SIZE });
+  const { data, isLoading, isError, refetch } = useProducts({ isActive: true, page: 1, pageSize: CATALOG_PAGE_SIZE });
   const addItem = useCartStore((s) => s.addItem);
   const openWeightEntry = useWeightEntryStore((s) => s.open);
 
@@ -181,7 +182,14 @@ export function PosMenu() {
           </div>
         )}
 
-        {!isLoading && products.length === 0 && (
+        {/* Checked BEFORE the empty-state branch below — on a failed fetch, `products` is also
+            an empty array, and rendering the empty-catalog message in that case would tell a
+            cashier "there are no products" when the real problem is a network/server error
+            (cold start, timeout, ...). That's a strictly worse UX than an honest error+retry: a
+            silent lie instead of an explained failure. */}
+        {!isLoading && isError && <ErrorState message={t("pos.menuLoadError")} onRetry={() => void refetch()} />}
+
+        {!isLoading && !isError && products.length === 0 && (
           <EmptyState
             icon={UtensilsCrossed}
             title={searchInput || categoryId ? t("common.noResultsTitle") : t("pos.emptyTitle")}
@@ -189,7 +197,7 @@ export function PosMenu() {
           />
         )}
 
-        {!isLoading && groups && groups.length > 0 && (
+        {!isLoading && !isError && groups && groups.length > 0 && (
           <div className="space-y-5 sm:space-y-6">
             {groups.map(({ category, products: categoryProducts }) => (
               <section key={category.id}>

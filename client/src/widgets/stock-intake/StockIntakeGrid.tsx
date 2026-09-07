@@ -17,6 +17,7 @@ import { useCreatePurchase } from "@/entities/purchase/api";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { toast } from "@/shared/stores/toastStore";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { ErrorState } from "@/shared/ui/ErrorState";
 import { Skeleton, SkeletonStatCard } from "@/shared/ui/Skeleton";
 
 const QUICK_AMOUNTS = [1, 2, 5, 10, 20];
@@ -43,7 +44,7 @@ function isValidPrice(value: string): boolean {
 
 export function StockIntakeGrid() {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useIngredients({ page: 1, pageSize: ALL_INGREDIENTS_PAGE_SIZE });
+  const { data, isLoading, isError, refetch } = useIngredients({ page: 1, pageSize: ALL_INGREDIENTS_PAGE_SIZE });
   const createPurchase = useCreatePurchase();
 
   const [searchInput, setSearchInput] = useState("");
@@ -157,9 +158,9 @@ export function StockIntakeGrid() {
 
   if (isError) {
     return (
-      <p role="alert" className="rounded-card bg-ink-card p-6 text-center text-sm text-danger-soft shadow-card">
-        {t("intake.loadError")}
-      </p>
+      <div className="rounded-card bg-ink-card shadow-card">
+        <ErrorState message={t("intake.loadError")} onRetry={() => void refetch()} />
+      </div>
     );
   }
 

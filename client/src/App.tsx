@@ -3,6 +3,7 @@ import { AuthBootstrap } from "@/features/auth/AuthBootstrap";
 import { NotificationStreamProvider } from "@/shared/notifications/NotificationStreamProvider";
 import { PrinterAutoReconnectProvider } from "@/shared/printing/PrinterAutoReconnectProvider";
 import { ReceiptPreviewDialog } from "@/shared/printing/ReceiptPreviewDialog";
+import { OfflineBanner } from "@/shared/ui/OfflineBanner";
 import { PwaNotifications } from "@/shared/ui/PwaNotifications";
 import { ToastContainer } from "@/shared/ui/ToastContainer";
 import { AdminNotificationCenter } from "@/widgets/notifications/AdminNotificationCenter";
@@ -10,6 +11,7 @@ import { AdminNotificationCenter } from "@/widgets/notifications/AdminNotificati
 export default function App() {
   return (
     <AuthBootstrap>
+      <OfflineBanner />
       <AppRoutes />
       <PwaNotifications />
       <ToastContainer />
