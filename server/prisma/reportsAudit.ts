@@ -11,8 +11,6 @@ import dotenv from "dotenv";
 
 import { createSale } from "../src/modules/sales/sale.service.js";
 import { addSaleItem, updateSaleItem, removeSaleItem } from "../src/modules/owner/owner.service.js";
-import { computeProfitStats, getVariantCostMap, unitCostOf } from "../src/modules/reports/report.costing.js";
-import { resolveDateRange } from "../src/shared/utils/dateRange.js";
 import { DEFAULT_LOCATION_ID } from "../src/bootstrap/menu.js";
 
 dotenv.config();
@@ -199,48 +197,24 @@ async function scenarioD_removeConcurrentWithUpdate() {
   await checkInvariant(saleId, "After concurrent remove+update on the same item");
 }
 
-async function scenarioHistoricalCostDrift() {
-  console.log("\n=== Historical correctness: does changing avgUnitCost retroactively change an OLD sale's reported profit? ===");
-  const saleId = await freshSale(); // 1x variantA @ revenue 1000, recipe: 1x ingredient
-
-  await prisma.ingredient.update({ where: { id: ingredientId }, data: { avgUnitCost: new Prisma.Decimal(100) } });
-  const costMap1 = await getVariantCostMap([variantAId]);
-  const profit1 = new Prisma.Decimal(1000).sub(unitCostOf(costMap1, variantAId));
-  console.log(`With avgUnitCost=100: this sale's item cost=${unitCostOf(costMap1, variantAId)}, profit=${profit1}`);
-
-  await prisma.ingredient.update({ where: { id: ingredientId }, data: { avgUnitCost: new Prisma.Decimal(400) } });
-  const costMap2 = await getVariantCostMap([variantAId]);
-  const profit2 = new Prisma.Decimal(1000).sub(unitCostOf(costMap2, variantAId));
-  console.log(`With avgUnitCost=400 (changed AFTER the sale, nothing else touched): same sale's item cost=${unitCostOf(costMap2, variantAId)}, profit=${profit2}`);
-
-  const changed = !profit1.equals(profit2);
-  console.log(
-    changed
-      ? "CONFIRMED: reported cost/profit for this already-completed sale changed retroactively — cost is NOT a historical snapshot, it's computed live from current avgUnitCost. This matches the code's own documented design (report.costing.ts), not a bug introduced here — but it means historical profit reports are NOT stable over time. Revenue (Sale.totalAmount/SaleItem.subtotal) is unaffected — only cost/profit drifts."
-      : "UNEXPECTED: cost did not change — investigate before trusting this finding.",
-  );
-
-  await prisma.saleChangeLog.deleteMany({ where: { saleId } });
-  await prisma.saleItem.deleteMany({ where: { saleId } });
-  await prisma.sale.deleteMany({ where: { id: saleId } });
-}
-
-async function scenarioTimezoneBoundary() {
-  console.log("\n=== Timezone: does 'today' use the server process's local TZ (no per-business setting)? ===");
-  // Not a DB test — resolveDateRange() is pure JS Date math over `new Date()` (the CURRENT
-  // process's wall clock / TZ), so this demonstrates the mechanism directly: two processes with
-  // different TZ settings compute a DIFFERENT "today" window for the exact same real instant.
-  console.log(`This process's TZ env: ${process.env.TZ ?? "(unset — uses the OS/container default)"}`);
-  console.log(`This process's resolved offset right now: UTC${new Date().getTimezoneOffset() <= 0 ? "+" : "-"}${Math.abs(new Date().getTimezoneOffset() / 60)}`);
-  const range = resolveDateRange("today");
-  console.log(`"today" resolves to: ${range.start.toISOString()} .. ${range.end.toISOString()} (in THIS process's local time)`);
-  console.log(
-    "If the deployed backend's container runs in UTC (Render's platform default, no TZ env var set) while Sharof KFS operates in Asia/Tashkent (UTC+5), " +
-      "this exact window is shifted 5 hours from Tashkent's real midnight-to-midnight — an order placed between 00:00 and 05:00 Tashkent time " +
-      "would be bucketed into the PREVIOUS UTC calendar day, i.e. counted as 'yesterday' in Сегодня/Вчера reports. " +
-      "This is a real, pre-existing characteristic already documented in dateRange.ts's own comment — not something this audit changed.",
-  );
-}
+/**
+ * SUPERSEDED — kept only as a pointer, not re-run here. This scenario originally proved the
+ * live (non-snapshotted) cost bug described above; that bug is now fixed by SaleItem's
+ * unitCostSnapshot/costSnapshot columns (see schema.prisma) and its own dedicated regression
+ * suite: prisma/historicalProfitAudit.ts (11 scenarios, including "does an old sale's profit
+ * survive a later avgUnitCost change" — run that script for the current, authoritative answer).
+ * getVariantCostMap() itself is UNCHANGED and still deliberately returns LIVE cost when called
+ * directly (that's still correct — it's the fallback path for un-snapshotted rows) — this
+ * function's old "CONFIRMED bug" framing no longer describes the application's real behavior,
+ * so it was removed rather than left here to mislead a future reader.
+ *
+ * SUPERSEDED — kept only as a pointer, not re-run here. The timezone finding this used to print
+ * (that "today" depends on the server process's local TZ) is now fixed — resolveDateRange()
+ * computes every boundary explicitly in Asia/Tashkent regardless of process TZ. See
+ * src/shared/utils/dateRange.test.ts (byte-identical output proven under TZ=UTC vs TZ=America/
+ * New_York) and prisma/timezoneAudit.ts (now re-verified to show correct, TZ-independent
+ * bucketing) for the current, authoritative tests.
+ */
 
 /**
  * Scenario E deliberately bypasses owner.service.ts to prove the underlying mechanism was
@@ -295,8 +269,6 @@ async function main() {
     await scenarioD_removeConcurrentWithUpdate();
     await scenarioE_forcedInterleave();
     await scenarioF_fixedFunctionsRepeatedConcurrency();
-    await scenarioHistoricalCostDrift();
-    await scenarioTimezoneBoundary();
   } finally {
     await cleanup();
   }

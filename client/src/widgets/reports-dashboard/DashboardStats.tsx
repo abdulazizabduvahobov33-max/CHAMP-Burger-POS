@@ -48,18 +48,21 @@ export function DashboardStats() {
           value={data ? formatPrice(data.today.profit) : undefined}
           isLoading={isLoading}
           accentClass={data ? profitColorClass(data.today.profit) : undefined}
+          estimated={data?.today.profitEstimated}
         />
         <StatCard
           label={t("dashboard.profitWeek")}
           value={data ? formatPrice(data.week.profit) : undefined}
           isLoading={isLoading}
           accentClass={data ? profitColorClass(data.week.profit) : undefined}
+          estimated={data?.week.profitEstimated}
         />
         <StatCard
           label={t("dashboard.profitMonth")}
           value={data ? formatPrice(data.month.profit) : undefined}
           isLoading={isLoading}
           accentClass={data ? profitColorClass(data.month.profit) : undefined}
+          estimated={data?.month.profitEstimated}
         />
         <StatCard
           label={t("dashboard.totalProfit")}
@@ -67,6 +70,7 @@ export function DashboardStats() {
           sublabel={data ? t("dashboard.marginSuffix", { margin: data.profitMargin }) : undefined}
           isLoading={isLoading}
           accentClass={data ? profitColorClass(data.totalProfit) : undefined}
+          estimated={data?.profitEstimated}
         />
       </div>
     </div>
@@ -80,6 +84,7 @@ function StatCard({
   isLoading,
   accent,
   accentClass,
+  estimated,
 }: {
   label: string;
   value?: string;
@@ -87,7 +92,9 @@ function StatCard({
   isLoading: boolean;
   accent?: "champ";
   accentClass?: string;
+  estimated?: boolean;
 }) {
+  const { t } = useTranslation();
   if (isLoading) return <SkeletonStatCard />;
 
   const resolvedClass = accentClass ?? (accent === "champ" ? "text-champ" : "text-white");
@@ -96,6 +103,11 @@ function StatCard({
       <p className="truncate text-xs uppercase tracking-wide text-white/40">{label}</p>
       <p className={`mt-2 text-xl font-bold sm:text-2xl ${resolvedClass}`}>{value}</p>
       {sublabel && <p className="mt-1 text-xs text-white/30">{sublabel}</p>}
+      {estimated && (
+        <p className="mt-1 text-xs text-white/30" title={t("sale.estimatedTooltip")}>
+          ≈ {t("sale.estimatedBadge")}
+        </p>
+      )}
     </div>
   );
 }

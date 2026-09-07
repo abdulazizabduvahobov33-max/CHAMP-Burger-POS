@@ -394,6 +394,8 @@
     "totalCost": "Tannarx",
     "totalProfit": "Chek foydasi",
     "total": "Jami",
+    "estimatedBadge": "taxminiy",
+    "estimatedTooltip": "Sotuv vaqtidagi aniq tannarx noma'lum (eski sotuv, saqlangan ma'lumot yo'q) — ingredientlarning joriy tannarxi bo'yicha taxminiy qiymat ko'rsatilgan",
     "columns": {
       "number": "№",
       "table": "Stol",

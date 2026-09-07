@@ -6,6 +6,13 @@ export const ZERO = new Prisma.Decimal(0);
 
 export type VariantCostMap = Map<string, Prisma.Decimal>;
 
+/** Anything with the same shape as the top-level `prisma` client for the calls this module
+ * makes — either the real client or a `$transaction` callback's `tx`. Letting callers pass
+ * `tx` is what makes a cost snapshot computed INSIDE a sale/correction transaction actually
+ * consistent with everything else that transaction reads/writes (see sale.service.ts's
+ * createSale/acceptSale and owner.service.ts's addSaleItem/updateSaleItem). */
+type QueryClient = Pick<typeof prisma, "recipe">;
+
 /**
  * Cost per single unit of each variant = Σ(recipe.quantity × ingredient.avgUnitCost).
  *
@@ -23,11 +30,11 @@ export type VariantCostMap = Map<string, Prisma.Decimal>;
  * characteristic of "current cost" reporting, not a bug (there is no per-sale cost history to
  * preserve; `PriceHistory` only ever tracked *selling* price and has never been written to).
  */
-export async function getVariantCostMap(variantIds: string[]): Promise<VariantCostMap> {
+export async function getVariantCostMap(variantIds: string[], client: QueryClient = prisma): Promise<VariantCostMap> {
   const map: VariantCostMap = new Map();
   if (variantIds.length === 0) return map;
 
-  const lines = await prisma.recipe.findMany({
+  const lines = await client.recipe.findMany({
     where: { variantId: { in: variantIds } },
     select: { variantId: true, quantity: true, ingredient: { select: { avgUnitCost: true } } },
   });
@@ -56,6 +63,13 @@ export type ProfitStats = {
   margin: string;
   receiptCount: number;
   averageProfit: string;
+  // True when at least one SaleItem in this period had no cost snapshot (a legacy sale from
+  // before the snapshot column existed, or — for a currently-open period — a PENDING order not
+  // yet accepted) and its cost had to fall back to today's live ingredient cost instead. When
+  // true, `cost`/`profit`/`margin` are a mix of real historical figures and current-cost
+  // estimates for the un-snapshotted portion — not a pure historical number. See getSaleDetail
+  // for the same signal at individual-item granularity.
+  costEstimated: boolean;
 };
 
 /**
@@ -65,10 +79,12 @@ export type ProfitStats = {
  * and the arbitrary-period profit-summary endpoint both call this instead of each
  * re-implementing the calculation.
  *
- * Cost comes from a single `groupBy` over SaleItem (same query shape `getTopProducts` already
- * uses), never by loading individual SaleItem rows — so this stays bounded by the number of
- * DISTINCT variants sold in the window (at most the size of the product catalog, typically a
- * few dozen for this business), not by how many sales/receipts exist in that window.
+ * Cost prefers each SaleItem's own frozen `costSnapshot` (captured at sale/accept time — see
+ * sale.service.ts) — a single `aggregate` `_sum`, cheap regardless of row count. Only the
+ * (ideally shrinking, post-migration) subset of items with NO snapshot falls back to a live
+ * cost lookup, and that fallback is still bounded by DISTINCT variants among just those
+ * un-snapshotted items, not by total row count — same complexity guarantee this function always
+ * had, just split into "cheap sum" + "small live-cost fallback" instead of one groupBy.
  */
 export async function computeProfitStats(locationId: string, start?: Date, end?: Date): Promise<ProfitStats> {
   const dateWhere = start && end ? { createdAt: { gte: start, lte: end } } : {};
@@ -76,19 +92,24 @@ export async function computeProfitStats(locationId: string, start?: Date, end?:
   // must not count as revenue/cost until an admin actually accepts them, or "today's revenue"
   // would include orders that might still be rejected or never paid.
   const acceptedOnly = { status: "ACCEPTED" as const };
+  // removedAt: null everywhere below — matches revenueAgg: Sale.totalAmount is already
+  // recomputed to exclude owner-removed items (see owner.service.ts), so cost must exclude them
+  // too or profit would be understated for a sale with a correction on it.
+  const itemScope = { removedAt: null, sale: { locationId, ...acceptedOnly, ...dateWhere } };
 
-  const [revenueAgg, grouped] = await Promise.all([
+  const [revenueAgg, snapshotCostAgg, liveNeeded] = await Promise.all([
     prisma.sale.aggregate({
       where: { locationId, ...acceptedOnly, ...dateWhere },
       _sum: { totalAmount: true },
       _count: { _all: true },
     }),
+    prisma.saleItem.aggregate({
+      where: { ...itemScope, hasCostSnapshot: true },
+      _sum: { costSnapshot: true },
+    }),
     prisma.saleItem.groupBy({
       by: ["variantId"],
-      // removedAt: null — matches revenueAgg above: Sale.totalAmount is already recomputed to
-      // exclude owner-removed items (see owner.service.ts), so cost must exclude them too or
-      // profit would be understated for a sale with a correction on it.
-      where: { removedAt: null, sale: { locationId, ...acceptedOnly, ...dateWhere } },
+      where: { ...itemScope, hasCostSnapshot: false },
       _sum: { quantity: true },
     }),
   ]);
@@ -96,8 +117,9 @@ export async function computeProfitStats(locationId: string, start?: Date, end?:
   const revenue = revenueAgg._sum.totalAmount ?? ZERO;
   const receiptCount = revenueAgg._count._all;
 
-  const costMap = await getVariantCostMap(grouped.map((g) => g.variantId));
-  const cost = grouped.reduce((sum, g) => sum.add(unitCostOf(costMap, g.variantId).mul(g._sum.quantity ?? ZERO)), ZERO);
+  const liveCostMap = await getVariantCostMap(liveNeeded.map((g) => g.variantId));
+  const liveCost = liveNeeded.reduce((sum, g) => sum.add(unitCostOf(liveCostMap, g.variantId).mul(g._sum.quantity ?? ZERO)), ZERO);
+  const cost = (snapshotCostAgg._sum.costSnapshot ?? ZERO).add(liveCost);
 
   const profit = revenue.sub(cost);
 
@@ -108,5 +130,6 @@ export async function computeProfitStats(locationId: string, start?: Date, end?:
     margin: marginOf(revenue, profit),
     receiptCount,
     averageProfit: receiptCount > 0 ? profit.div(receiptCount).toString() : "0",
+    costEstimated: liveNeeded.length > 0,
   };
 }

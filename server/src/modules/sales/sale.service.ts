@@ -6,6 +6,7 @@ import { newNotificationId, notificationBus } from "../../shared/notifications/n
 import { isUniqueViolation } from "../../shared/utils/prismaErrors.js";
 import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { deductRecipeIngredients } from "../recipes/recipe.service.js";
+import { getVariantCostMap, unitCostOf } from "../reports/report.costing.js";
 import type { SaleItemInput } from "./sale.schema.js";
 
 type SaleWithItems = Prisma.SaleGetPayload<{
@@ -213,6 +214,13 @@ export async function createSale(
         },
       });
 
+      // Cost snapshot (see SaleItem.unitCostSnapshot/costSnapshot in schema.prisma) is only
+      // meaningful at the moment stock actually gets deducted — for an autoAccept sale that's
+      // right here; for a PENDING (waiter) sale it's deferred to acceptSale below, same as the
+      // deduction itself. Computed once for every variant in this cart, inside this same
+      // transaction, so it reflects the exact ingredient costs this transaction is acting on.
+      const costMap = autoAccept ? await getVariantCostMap(variantIds, tx) : null;
+
       let totalAmount = new Prisma.Decimal(0);
       for (const [variantId, quantity] of merged) {
         const variant = variantMap.get(variantId)!;
@@ -220,8 +228,16 @@ export async function createSale(
         const subtotal = unitPrice.mul(quantity);
         totalAmount = totalAmount.add(subtotal);
 
+        const costFields = costMap
+          ? {
+              unitCostSnapshot: unitCostOf(costMap, variantId),
+              costSnapshot: unitCostOf(costMap, variantId).mul(quantity),
+              hasCostSnapshot: costMap.has(variantId),
+            }
+          : {};
+
         const saleItem = await tx.saleItem.create({
-          data: { saleId: sale.id, variantId, quantity, unitPrice, subtotal },
+          data: { saleId: sale.id, variantId, quantity, unitPrice, subtotal, ...costFields },
         });
 
         if (autoAccept) {
@@ -363,8 +379,21 @@ export async function acceptSale(locationId: string, id: string, cashReceived?: 
       throw new AppError(409, "ALREADY_HANDLED", "Заказ уже обработан");
     }
 
+    // Same reasoning as createSale's autoAccept path: this is the moment stock is actually
+    // deducted for a waiter's order, so it's the correct moment to freeze its cost snapshot too.
+    const variantIds = [...new Set(sale.items.map((item) => item.variantId))];
+    const costMap = await getVariantCostMap(variantIds, tx);
+
     for (const item of sale.items) {
       await deductRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), sale.sellerId, item.id);
+      await tx.saleItem.update({
+        where: { id: item.id },
+        data: {
+          unitCostSnapshot: unitCostOf(costMap, item.variantId),
+          costSnapshot: unitCostOf(costMap, item.variantId).mul(item.quantity),
+          hasCostSnapshot: costMap.has(item.variantId),
+        },
+      });
     }
 
     return sale.sellerId;

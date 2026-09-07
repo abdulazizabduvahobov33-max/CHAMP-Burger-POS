@@ -4,6 +4,7 @@ import { prisma } from "../../config/db.js";
 import { AppError } from "../../middleware/error.js";
 import { shortReceiptNumber } from "../../shared/utils/receiptNumber.js";
 import { deductRecipeIngredients, restockRecipeIngredients } from "../recipes/recipe.service.js";
+import { getVariantCostMap, unitCostOf } from "../reports/report.costing.js";
 import type {
   AddSaleItemInput,
   CancelSaleInput,
@@ -279,9 +280,22 @@ export async function updateSaleItem(
 
     if (logs.length === 0) return; // nothing actually changed — a no-op edit shouldn't log anything
 
+    // unitCostSnapshot is frozen exactly like unitPrice — a quantity correction rescales the
+    // extended costSnapshot the same way it rescales subtotal, but must NEVER re-derive the
+    // per-unit figure from today's ingredient cost (that would reopen the exact historical-
+    // drift bug this snapshot exists to close). A unitPrice-only correction touches neither
+    // cost field — cost of goods sold doesn't change just because the recorded selling price
+    // was corrected. A row with no snapshot at all (legacy) stays without one — never backfilled.
+    const newCostSnapshot = item.unitCostSnapshot !== null ? item.unitCostSnapshot.mul(newQuantity) : null;
+
     await tx.saleItem.update({
       where: { id: item.id },
-      data: { quantity: newQuantity, unitPrice: newUnitPrice, subtotal: newUnitPrice.mul(newQuantity) },
+      data: {
+        quantity: newQuantity,
+        unitPrice: newUnitPrice,
+        subtotal: newUnitPrice.mul(newQuantity),
+        costSnapshot: newCostSnapshot,
+      },
     });
 
     await recomputeTotal(tx, saleId);
@@ -311,8 +325,20 @@ export async function addSaleItem(locationId: string, saleId: string, ownerId: s
     }
 
     const subtotal = variant.price.mul(input.quantity);
+    // This line didn't exist at the sale's original creation, so "sale time" for its own cost
+    // snapshot is right now, same as createSale's autoAccept path — see schema.prisma.
+    const costMap = await getVariantCostMap([variant.id], tx);
     const newItem = await tx.saleItem.create({
-      data: { saleId, variantId: variant.id, quantity: input.quantity, unitPrice: variant.price, subtotal },
+      data: {
+        saleId,
+        variantId: variant.id,
+        quantity: input.quantity,
+        unitPrice: variant.price,
+        subtotal,
+        unitCostSnapshot: unitCostOf(costMap, variant.id),
+        costSnapshot: unitCostOf(costMap, variant.id).mul(input.quantity),
+        hasCostSnapshot: costMap.has(variant.id),
+      },
     });
 
     await deductRecipeIngredients(tx, variant.id, locationId, input.quantity, ownerId, newItem.id);

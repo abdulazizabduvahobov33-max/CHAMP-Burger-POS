@@ -30,6 +30,10 @@ export type PeriodStat = {
   revenue: string;
   count: number;
   profit: string;
+  // True if any sale counted in this period had no historical cost snapshot (a legacy sale, or
+  // a still-open PENDING order) and fell back to today's live ingredient cost — the figure is a
+  // mix of real historical cost and a current-cost estimate, not a pure historical number.
+  profitEstimated: boolean;
 };
 
 export type DashboardSummary = {
@@ -42,6 +46,7 @@ export type DashboardSummary = {
   totalCost: string;
   totalProfit: string;
   profitMargin: string;
+  profitEstimated: boolean;
 };
 
 export type ProfitStats = {
@@ -51,6 +56,7 @@ export type ProfitStats = {
   margin: string;
   receiptCount: number;
   averageProfit: string;
+  costEstimated: boolean;
 };
 
 export type ProductProfitabilitySort = "quantity" | "revenue" | "cost" | "profit" | "margin";
@@ -130,6 +136,9 @@ export type SaleDetailItem = {
   cost: string;
   profit: string;
   hasCostData: boolean;
+  // True when `cost`/`profit` above came from today's live ingredient cost because this item
+  // has no historical snapshot — not the item's real cost at the time it was sold.
+  costIsEstimated: boolean;
 };
 
 export type SaleDetail = {
@@ -141,6 +150,7 @@ export type SaleDetail = {
   totalAmount: string;
   totalCost: string;
   totalProfit: string;
+  profitEstimated: boolean;
   items: SaleDetailItem[];
 };
 

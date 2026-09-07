@@ -39,15 +39,16 @@ export async function getDashboardSummary(locationId: string) {
   ]);
 
   return {
-    today: { revenue: todayStats.revenue, count: todayStats.receiptCount, profit: todayStats.profit },
-    week: { revenue: weekStats.revenue, count: weekStats.receiptCount, profit: weekStats.profit },
-    month: { revenue: monthStats.revenue, count: monthStats.receiptCount, profit: monthStats.profit },
+    today: { revenue: todayStats.revenue, count: todayStats.receiptCount, profit: todayStats.profit, profitEstimated: todayStats.costEstimated },
+    week: { revenue: weekStats.revenue, count: weekStats.receiptCount, profit: weekStats.profit, profitEstimated: weekStats.costEstimated },
+    month: { revenue: monthStats.revenue, count: monthStats.receiptCount, profit: monthStats.profit, profitEstimated: monthStats.costEstimated },
     totalRevenue: allTimeStats.revenue,
     receiptCount: allTimeStats.receiptCount,
     averageReceipt: average(new Prisma.Decimal(allTimeStats.revenue), allTimeStats.receiptCount),
     totalCost: allTimeStats.cost,
     totalProfit: allTimeStats.profit,
     profitMargin: allTimeStats.margin,
+    profitEstimated: allTimeStats.costEstimated,
   };
 }
 
@@ -130,15 +131,23 @@ export async function getSaleDetail(locationId: string, id: string) {
     throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
   }
 
-  // Per-item cost/profit (Module 9) — one batched cost lookup for every distinct variant in
-  // this sale, not one query per line.
-  const costMap = await getVariantCostMap(sale.items.map((item) => item.variantId));
+  // Per-item cost/profit (Module 9). Prefers each item's frozen `costSnapshot` (the actual
+  // historical cost, captured at sale/accept time — see sale.service.ts) so this figure stays
+  // stable even after a later purchase changes an ingredient's avgUnitCost. Only an item with
+  // NO snapshot (a legacy row from before this column existed, or a still-open PENDING order)
+  // falls back to today's live cost — and is marked `costIsEstimated` so the UI never presents
+  // that fallback as if it were the true historical figure.
+  const liveCostMap = await getVariantCostMap(sale.items.filter((item) => !item.hasCostSnapshot).map((item) => item.variantId));
 
   let totalCost = ZERO;
+  let anyEstimated = false;
   const items = sale.items.map((item) => {
-    const cost = unitCostOf(costMap, item.variantId).mul(item.quantity);
+    const costIsEstimated = !item.hasCostSnapshot;
+    const cost = item.hasCostSnapshot ? item.costSnapshot! : unitCostOf(liveCostMap, item.variantId).mul(item.quantity);
+    const hasCostData = item.hasCostSnapshot || liveCostMap.has(item.variantId);
     const profit = item.subtotal.sub(cost);
     totalCost = totalCost.add(cost);
+    if (costIsEstimated) anyEstimated = true;
     return {
       id: item.id,
       productName: item.variant.product.name,
@@ -149,9 +158,13 @@ export async function getSaleDetail(locationId: string, id: string) {
       subtotal: item.subtotal.toString(),
       cost: cost.toString(),
       profit: profit.toString(),
-      // A variant with no recipe configured (e.g. Kefsi today) prices at cost=0, which would
-      // otherwise misleadingly read as "100% margin" — flag it so the UI can show "—" instead.
-      hasCostData: costMap.has(item.variantId),
+      // A variant with no cost data at all (never had a recipe, live or historical) prices at
+      // cost=0, which would otherwise misleadingly read as "100% margin" — flag it so the UI
+      // can show "—" instead.
+      hasCostData,
+      // True when `cost`/`profit` above came from TODAY's live ingredient cost, not this item's
+      // own historical snapshot — the UI must visibly mark this as approximate.
+      costIsEstimated,
     };
   });
 
@@ -166,6 +179,7 @@ export async function getSaleDetail(locationId: string, id: string) {
     totalAmount: sale.totalAmount.toString(),
     totalCost: totalCost.toString(),
     totalProfit: totalProfit.toString(),
+    profitEstimated: anyEstimated,
     items,
   };
 }

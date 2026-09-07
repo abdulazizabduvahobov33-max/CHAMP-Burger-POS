@@ -1,10 +1,9 @@
 /**
- * Empirically proves (or disproves) the timezone/date-boundary concern flagged in
- * dateRange.ts's own comment: "today" is computed from the SERVER PROCESS's local timezone,
- * with no per-business setting. This creates one TEST DB fixture sale near a UTC/Asia-Tashkent
- * midnight boundary, then re-runs resolveDateRange("today") in two separate child processes —
- * one with TZ=UTC, one with TZ=Asia/Tashkent — to see whether the SAME real sale lands in a
- * different calendar day purely because of the server's TZ setting.
+ * Regression check for the timezone/date-boundary fix in dateRange.ts. resolveDateRange() now
+ * computes every boundary explicitly in Asia/Tashkent (via Intl, not process.env.TZ) — this
+ * creates a TEST DB fixture sale at 02:00 Tashkent-local time (early morning, the exact window
+ * that used to be misbucketed into "yesterday" when the server ran in UTC) and confirms it is
+ * correctly counted as "today" regardless of which timezone the RUNNING PROCESS itself is in.
  *
  * Run from server/:  npx tsx prisma/timezoneAudit.ts
  */
@@ -44,12 +43,11 @@ async function main() {
   const admin = await prisma.user.findUniqueOrThrow({ where: { login: process.env.SEED_ADMIN_LOGIN || "admin" } });
   const location = await prisma.location.findFirstOrThrow();
 
-  const utcProbe = runChild("UTC");
-  const utcStart = new Date(utcProbe.start);
-
-  // 1 hour before UTC's "today" window starts (23:00 UTC "yesterday"). In Asia/Tashkent
-  // (UTC+5) that instant is 04:00 local — early this morning from the business's point of view.
-  const fixtureCreatedAt = new Date(utcStart.getTime() - 60 * 60 * 1000);
+  // Ask a UTC-run child for today's REAL Tashkent-anchored window, then place the fixture 2h
+  // after its start — 02:00 Tashkent-local, squarely in the "00:00-05:00 local" window that used
+  // to be misbucketed as "yesterday" before this fix, when the server ran in UTC.
+  const probe = runChild("UTC");
+  const fixtureCreatedAt = new Date(new Date(probe.start).getTime() + 2 * 60 * 60 * 1000);
 
   const sale = await prisma.sale.create({
     data: {
@@ -63,25 +61,29 @@ async function main() {
   });
 
   try {
-    console.log(`Fixture sale ${sale.id}: createdAt=${fixtureCreatedAt.toISOString()} UTC = 04:00 local in Asia/Tashkent, 1h before UTC midnight.`);
+    console.log(`Fixture sale ${sale.id}: createdAt=${fixtureCreatedAt.toISOString()} UTC (02:00 Tashkent-local, today).`);
 
-    const utcResult = runChild("UTC", sale.id);
-    const tashkentResult = runChild("Asia/Tashkent", sale.id);
+    const results = {
+      UTC: runChild("UTC", sale.id),
+      "Asia/Tashkent": runChild("Asia/Tashkent", sale.id),
+      "America/New_York": runChild("America/New_York", sale.id),
+    };
+    for (const [tz, r] of Object.entries(results)) {
+      console.log(`Server TZ=${tz}: "today" window ${r.start} .. ${r.end} | fixture counted as today? ${r.included}`);
+    }
 
-    console.log(`Server TZ=UTC:            "today" window ${utcResult.start} .. ${utcResult.end} | fixture counted as today? ${utcResult.included}`);
-    console.log(`Server TZ=Asia/Tashkent:  "today" window ${tashkentResult.start} .. ${tashkentResult.end} | fixture counted as today? ${tashkentResult.included}`);
+    const allIncluded = Object.values(results).every((r) => r.included === true);
+    const allIdenticalWindow = Object.values(results).every((r) => r.start === results.UTC.start && r.end === results.UTC.end);
 
-    if (utcResult.included !== tashkentResult.included) {
+    if (allIncluded && allIdenticalWindow) {
       console.log(
-        "CONFIRMED: the exact same sale (same createdAt instant) is bucketed into a DIFFERENT report day purely depending on the server process's TZ. " +
-          "There is no render.yaml in this repo (Render service config is entirely dashboard-managed, which this audit cannot inspect) and no TZ env var " +
-          "is set anywhere in the codebase — Render's documented platform default for containers with no TZ override is UTC. If that holds for the deployed " +
-          "backend, a Tashkent order placed roughly between 00:00 and 05:00 local time will show up under 'Вчера' instead of 'Сегодня', and similarly skew " +
-          "week/month/custom-range boundaries by the same ~5 hours. This is inference from repo config + Render's documented default, not a confirmed read " +
-          "of the actual deployed environment (no dashboard access) — MANUAL CHECK NEEDED to confirm the real TZ env var on the Render service.",
+        "PASS — FIX VERIFIED: an early-morning (02:00) Tashkent-local sale is correctly counted as 'today' regardless of the " +
+          "server process's own TZ, and all three processes computed the exact same UTC window. This is the specific bug that " +
+          "used to exist (early-morning Tashkent orders misbucketed as 'yesterday' when the server ran in UTC) — it is now closed.",
       );
     } else {
-      console.log("UNEXPECTED: no difference observed — investigate before trusting this finding.");
+      console.log("FAIL — regression: TZ-independence or correct Tashkent bucketing no longer holds. Investigate before trusting reports.");
+      process.exitCode = 1;
     }
   } finally {
     await prisma.sale.delete({ where: { id: sale.id } });

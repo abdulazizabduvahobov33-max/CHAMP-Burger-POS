@@ -12,6 +12,7 @@ const { restockRecipeIngredientsMock, deductRecipeIngredientsMock, outerSaleFind
     saleItemUpdate: vi.fn().mockResolvedValue({ id: "item-1" }),
     saleItemCreate: vi.fn().mockResolvedValue({ id: "item-2" }),
     productVariantFindUnique: vi.fn(),
+    recipeFindMany: vi.fn().mockResolvedValue([]),
     saleUpdate: vi.fn().mockResolvedValue({}),
     saleChangeLogCreate: vi.fn().mockResolvedValue({}),
     saleChangeLogCreateMany: vi.fn().mockResolvedValue({}),
@@ -38,6 +39,7 @@ vi.mock("../../config/db.js", () => ({
           create: txMocks.saleItemCreate,
         },
         productVariant: { findUnique: txMocks.productVariantFindUnique },
+        recipe: { findMany: txMocks.recipeFindMany },
         saleChangeLog: { create: txMocks.saleChangeLogCreate, createMany: txMocks.saleChangeLogCreateMany },
       }),
     sale: { findFirst: outerSaleFindFirstMock },
@@ -147,6 +149,7 @@ describe("updateSaleItem / addSaleItem — recomputeTotal race guard", () => {
       variantId: "v-1",
       quantity: new Prisma.Decimal(1),
       unitPrice: new Prisma.Decimal(500),
+      unitCostSnapshot: new Prisma.Decimal(200),
       removedAt: null,
       variant: { product: { name: "Cola", saleType: "UNIT" } },
     });

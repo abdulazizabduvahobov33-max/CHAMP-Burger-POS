@@ -12,6 +12,20 @@ type SaleDetailDialogProps = {
   onClose: () => void;
 };
 
+/** Marks a cost/profit figure that fell back to today's live ingredient cost because this item
+ * (or sale) has no historical cost snapshot — never let that read as an exact historical figure. */
+function EstimatedBadge() {
+  const { t } = useTranslation();
+  return (
+    <span
+      title={t("sale.estimatedTooltip")}
+      className="ml-1 rounded px-1 py-0.5 text-[0.65rem] font-medium normal-case tracking-normal text-white/40"
+    >
+      ≈ {t("sale.estimatedBadge")}
+    </span>
+  );
+}
+
 export function SaleDetailDialog({ saleId, onClose }: SaleDetailDialogProps) {
   const { t } = useTranslation();
   const { data: sale, isLoading } = useSaleDetail(saleId);
@@ -65,9 +79,13 @@ export function SaleDetailDialog({ saleId, onClose }: SaleDetailDialogProps) {
                     <td className="px-4 py-2 text-white/70">{formatSaleQuantity(item.quantity, item.saleType)}</td>
                     <td className="px-4 py-2 text-white/70">{formatPrice(item.unitPrice)}</td>
                     <td className="px-4 py-2 font-semibold text-champ">{formatPrice(item.subtotal)}</td>
-                    <td className="px-4 py-2 text-white/50">{item.hasCostData ? formatPrice(item.cost) : "—"}</td>
+                    <td className="px-4 py-2 text-white/50">
+                      {item.hasCostData ? formatPrice(item.cost) : "—"}
+                      {item.hasCostData && item.costIsEstimated && <EstimatedBadge />}
+                    </td>
                     <td className={`px-4 py-2 font-semibold ${item.hasCostData ? profitColorClass(item.profit) : "text-white/50"}`}>
                       {item.hasCostData ? formatPrice(item.profit) : "—"}
+                      {item.hasCostData && item.costIsEstimated && <EstimatedBadge />}
                     </td>
                   </tr>
                 ))}
@@ -81,7 +99,10 @@ export function SaleDetailDialog({ saleId, onClose }: SaleDetailDialogProps) {
               <span>{formatPrice(sale.totalCost)}</span>
             </div>
             <div className={`flex items-center justify-between text-sm font-semibold ${profitColorClass(sale.totalProfit)}`}>
-              <span>{t("sale.totalProfit")}</span>
+              <span>
+                {t("sale.totalProfit")}
+                {sale.profitEstimated && <EstimatedBadge />}
+              </span>
               <span>{formatPrice(sale.totalProfit)}</span>
             </div>
             <div className="flex items-center justify-between text-lg font-bold">

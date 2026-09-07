@@ -86,6 +86,7 @@ function ProfitSummaryStrip({ filter }: { filter: DateFilter }) {
         value={data ? formatPrice(data.profit) : undefined}
         isLoading={isLoading}
         accentClass={data ? profitColorClass(data.profit) : undefined}
+        estimated={data?.costEstimated}
       />
       <StatCard label={t("profit.columns.margin")} value={data ? `${data.margin}%` : undefined} isLoading={isLoading} />
       <StatCard label={t("profit.averageProfit")} value={data ? formatPrice(data.averageProfit) : undefined} isLoading={isLoading} />
@@ -98,16 +99,24 @@ function StatCard({
   value,
   isLoading,
   accentClass,
+  estimated,
 }: {
   label: string;
   value?: string;
   isLoading: boolean;
   accentClass?: string;
+  estimated?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-card bg-ink-card p-4 shadow-card sm:p-5">
       <p className="truncate text-xs uppercase tracking-wide text-white/40">{label}</p>
       <p className={`mt-2 text-xl font-bold sm:text-2xl ${accentClass ?? "text-white"}`}>{isLoading ? "вЂ¦" : value}</p>
+      {!isLoading && estimated && (
+        <p className="mt-1 text-xs text-white/30" title={t("sale.estimatedTooltip")}>
+          ≈ {t("sale.estimatedBadge")}
+        </p>
+      )}
     </div>
   );
 }

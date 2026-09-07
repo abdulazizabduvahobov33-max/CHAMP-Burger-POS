@@ -11,6 +11,8 @@ const { findUniqueOrThrowMock, saleFindUniqueMock, userFindUniqueMock, deductRec
       saleUpdate: vi.fn().mockResolvedValue({}),
       saleFindFirst: vi.fn(),
       saleUpdateMany: vi.fn(),
+      saleItemUpdate: vi.fn().mockResolvedValue({}),
+      recipeFindMany: vi.fn().mockResolvedValue([]),
     };
     return {
       findUniqueOrThrowMock: vi.fn(),
@@ -34,7 +36,8 @@ vi.mock("../../config/db.js", () => ({
           findFirst: txMocks.saleFindFirst,
           updateMany: txMocks.saleUpdateMany,
         },
-        saleItem: { create: txMocks.saleItemCreate },
+        saleItem: { create: txMocks.saleItemCreate, update: txMocks.saleItemUpdate },
+        recipe: { findMany: txMocks.recipeFindMany },
       }),
     sale: { findUniqueOrThrow: findUniqueOrThrowMock, findUnique: saleFindUniqueMock },
     user: { findUnique: userFindUniqueMock },

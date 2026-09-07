@@ -395,6 +395,25 @@ model SaleItem {
   quantity  Decimal        @db.Decimal(12, 3)
   unitPrice Decimal        @db.Decimal(12, 2) // цена "заморожена" на момент продажи
   subtotal  Decimal        @db.Decimal(14, 2)
+  // Ingredient-cost snapshot, frozen at the moment this line was created (or, for a waiter's
+  // sent order, at the moment it was accepted — see sale.service.ts's createSale/acceptSale) so
+  // a LATER change to Ingredient.avgUnitCost or the product's Recipe can never retroactively
+  // move an already-closed sale's reported profit. unitCostSnapshot behaves exactly like
+  // unitPrice above (frozen per unit, preserved across a quantity correction); costSnapshot
+  // behaves exactly like subtotal (the frozen extended amount, recomputed only when quantity
+  // changes — see owner.service.ts's updateSaleItem). Both NULL = no snapshot was ever taken —
+  // true for every row created before this column existed (legacy data) and MUST NOT be
+  // backfilled with today's cost; report code must treat NULL as "historical cost unknown," not
+  // silently fall back to a live estimate without saying so.
+  unitCostSnapshot Decimal? @db.Decimal(12, 2)
+  costSnapshot     Decimal? @db.Decimal(14, 2)
+  // True only when the variant had at least one real Recipe line at snapshot time (mirrors the
+  // live `hasCostData` concept report.costing.ts already uses, just persisted). False covers
+  // both "legacy row, no snapshot attempted" and "snapshot attempted but this variant genuinely
+  // had no recipe wired up" — both cases need the exact same "don't trust this as history"
+  // treatment downstream, so one flag is enough; unitCostSnapshot/costSnapshot being NULL vs 0
+  // is what distinguishes the two for anyone debugging data quality later.
+  hasCostSnapshot  Boolean  @default(false)
   // Owner-panel soft removal (see owner.service.ts's removeSaleItem) — the row is NEVER deleted,
   // just flagged, so the original sale composition stays fully reconstructable; every read that
   // computes an active total/quantity filters `removedAt: null`. A row added by the owner after
