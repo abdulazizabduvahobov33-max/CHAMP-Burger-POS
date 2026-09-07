@@ -71,7 +71,7 @@
       "warehouse": { "title": "Ombor", "subtitle": "Ingredientlar spravochnigi" },
       "intake": { "title": "Tovar kirimi", "subtitle": "Omborni tez to'ldirish" },
       "purchases": { "title": "Xaridlar", "subtitle": "Yetkazib berishlar va yetkazib beruvchilar" },
-      "profit": { "title": "Foyda", "subtitle": "Tannarx va marja" },
+      "profit": { "title": "Yalpi foyda", "subtitle": "Tannarx va marja" },
       "users": { "title": "Foydalanuvchilar", "subtitle": "Xodimlar va rollar" },
       "settings": { "title": "Sozlamalar", "subtitle": "Kompaniya profili" },
       "ai": { "title": "AI Yordamchi", "subtitle": "Savollar, xarajatlar, tahlil" }
@@ -84,10 +84,10 @@
     "totalRevenue": "Umumiy tushum",
     "receiptCount": "Cheklar soni",
     "averageReceipt": "O'rtacha chek",
-    "profitToday": "Bugungi foyda",
-    "profitWeek": "Haftalik foyda",
-    "profitMonth": "Oylik foyda",
-    "totalProfit": "Umumiy foyda",
+    "profitToday": "Bugungi yalpi foyda",
+    "profitWeek": "Haftalik yalpi foyda",
+    "profitMonth": "Oylik yalpi foyda",
+    "totalProfit": "Umumiy yalpi foyda",
     "marginSuffix": "{{margin}}% marja",
     "topProducts": "Mashhur mahsulotlar",
     "topProductsLoadError": "Mahsulotlarni yuklab bo'lmadi",
@@ -149,16 +149,16 @@
     "loadError": "Ma'lumotlarni yuklab bo'lmadi",
     "empty": "Davr uchun ma'lumot yo'q",
     "emptyTitle": "Davr uchun ma'lumot yo'q",
-    "emptyDescription": "Sotuvlar bo'lishi bilan foyda tahlili shu yerda paydo bo'ladi",
+    "emptyDescription": "Sotuvlar bo'lishi bilan yalpi foyda tahlili shu yerda paydo bo'ladi",
     "columns": {
       "name": "Mahsulot",
       "quantity": "Sotildi",
       "revenue": "Tushum",
       "cost": "Tannarx",
-      "profit": "Foyda",
+      "profit": "Yalpi foyda",
       "margin": "Marja"
     },
-    "averageProfit": "Chek foydasi"
+    "averageProfit": "Chekning yalpi foydasi"
   },
   "purchase": {
     "createTitle": "Yangi xarid",
@@ -392,7 +392,7 @@
     "statusRejected": "Rad etilgan",
     "statusCancelled": "Bekor qilingan",
     "totalCost": "Tannarx",
-    "totalProfit": "Chek foydasi",
+    "totalProfit": "Chekning yalpi foydasi",
     "total": "Jami",
     "estimatedBadge": "taxminiy",
     "estimatedTooltip": "Sotuv vaqtidagi aniq tannarx noma'lum (eski sotuv, saqlangan ma'lumot yo'q) — ingredientlarning joriy tannarxi bo'yicha taxminiy qiymat ko'rsatilgan",
@@ -407,7 +407,7 @@
       "quantity": "Miqdori",
       "price": "Narxi",
       "cost": "Tannarx",
-      "profit": "Foyda"
+      "profit": "Yalpi foyda"
     }
   },
   "settings": {
