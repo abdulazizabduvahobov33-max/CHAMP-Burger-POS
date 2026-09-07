@@ -151,6 +151,15 @@ export async function removeSaleItem(
   input: RemoveSaleItemInput,
 ) {
   await prisma.$transaction(async (tx) => {
+    // Locks this sale's row for the duration of the transaction — recomputeTotal below reads
+    // every active SaleItem and writes Sale.totalAmount with no other guard, so without this a
+    // second correction on the same sale (add/update/remove) racing concurrently could read a
+    // stale item snapshot and overwrite totalAmount with a value that silently drops the other
+    // correction's change (proven empirically: prisma/reportsAudit.ts, scenario E). A real
+    // Postgres row lock — not an in-memory lock — so it holds across multiple backend instances
+    // and is automatically released on commit/rollback/crash.
+    await tx.$queryRaw`SELECT id FROM sales WHERE id = ${saleId} FOR UPDATE`;
+
     const sale = await tx.sale.findFirst({ where: { id: saleId, locationId } });
     if (!sale) throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
     if (sale.status !== "ACCEPTED") throw new AppError(409, "SALE_NOT_CORRECTABLE", "Исправления доступны только для оформленных продаж");
@@ -205,6 +214,10 @@ export async function updateSaleItem(
   input: UpdateSaleItemInput,
 ) {
   await prisma.$transaction(async (tx) => {
+    // See removeSaleItem's identical lock for why: recomputeTotal's read-then-write is
+    // otherwise unguarded (proven: prisma/reportsAudit.ts, scenario E).
+    await tx.$queryRaw`SELECT id FROM sales WHERE id = ${saleId} FOR UPDATE`;
+
     const sale = await tx.sale.findFirst({ where: { id: saleId, locationId } });
     if (!sale) throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
     if (sale.status !== "ACCEPTED") throw new AppError(409, "SALE_NOT_CORRECTABLE", "Исправления доступны только для оформленных продаж");
@@ -280,6 +293,10 @@ export async function updateSaleItem(
 
 export async function addSaleItem(locationId: string, saleId: string, ownerId: string, input: AddSaleItemInput) {
   await prisma.$transaction(async (tx) => {
+    // See removeSaleItem's identical lock for why: recomputeTotal's read-then-write is
+    // otherwise unguarded (proven: prisma/reportsAudit.ts, scenario E).
+    await tx.$queryRaw`SELECT id FROM sales WHERE id = ${saleId} FOR UPDATE`;
+
     const sale = await tx.sale.findFirst({ where: { id: saleId, locationId } });
     if (!sale) throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
     if (sale.status !== "ACCEPTED") throw new AppError(409, "SALE_NOT_CORRECTABLE", "Исправления доступны только для оформленных продаж");

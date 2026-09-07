@@ -1,14 +1,20 @@
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { restockRecipeIngredientsMock, deductRecipeIngredientsMock, outerSaleFindFirstMock, txMocks } = vi.hoisted(() => {
   const txMocks = {
+    queryRaw: vi.fn().mockResolvedValue([{ id: "sale-1" }]),
     saleFindFirst: vi.fn(),
     saleUpdateMany: vi.fn(),
     saleItemFindFirst: vi.fn(),
     saleItemUpdateMany: vi.fn(),
     saleItemFindMany: vi.fn().mockResolvedValue([]),
+    saleItemUpdate: vi.fn().mockResolvedValue({ id: "item-1" }),
+    saleItemCreate: vi.fn().mockResolvedValue({ id: "item-2" }),
+    productVariantFindUnique: vi.fn(),
     saleUpdate: vi.fn().mockResolvedValue({}),
     saleChangeLogCreate: vi.fn().mockResolvedValue({}),
+    saleChangeLogCreateMany: vi.fn().mockResolvedValue({}),
   };
   return {
     restockRecipeIngredientsMock: vi.fn().mockResolvedValue([]),
@@ -22,13 +28,17 @@ vi.mock("../../config/db.js", () => ({
   prisma: {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
+        $queryRaw: txMocks.queryRaw,
         sale: { findFirst: txMocks.saleFindFirst, updateMany: txMocks.saleUpdateMany, update: txMocks.saleUpdate },
         saleItem: {
           findFirst: txMocks.saleItemFindFirst,
           updateMany: txMocks.saleItemUpdateMany,
           findMany: txMocks.saleItemFindMany,
+          update: txMocks.saleItemUpdate,
+          create: txMocks.saleItemCreate,
         },
-        saleChangeLog: { create: txMocks.saleChangeLogCreate },
+        productVariant: { findUnique: txMocks.productVariantFindUnique },
+        saleChangeLog: { create: txMocks.saleChangeLogCreate, createMany: txMocks.saleChangeLogCreateMany },
       }),
     sale: { findFirst: outerSaleFindFirstMock },
   },
@@ -39,7 +49,7 @@ vi.mock("../recipes/recipe.service.js", () => ({
   deductRecipeIngredients: deductRecipeIngredientsMock,
 }));
 
-import { cancelSale, removeSaleItem } from "./owner.service.js";
+import { addSaleItem, cancelSale, removeSaleItem, updateSaleItem } from "./owner.service.js";
 
 const FAKE_SALE_DETAIL = {
   id: "sale-1",
@@ -113,5 +123,59 @@ describe("removeSaleItem — concurrent double-remove of the same line", () => {
       code: "ITEM_ALREADY_REMOVED",
     });
     expect(restockRecipeIngredientsMock).not.toHaveBeenCalled();
+  });
+
+  it("locks the sale row (SELECT ... FOR UPDATE) before reading anything else", async () => {
+    txMocks.saleItemUpdateMany.mockResolvedValue({ count: 1 });
+
+    await removeSaleItem("loc-1", "sale-1", "item-1", "owner-1", {});
+
+    expect(txMocks.queryRaw).toHaveBeenCalledTimes(1);
+    const lockOrder = txMocks.queryRaw.mock.invocationCallOrder[0];
+    const findFirstOrder = txMocks.saleFindFirst.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(findFirstOrder);
+  });
+});
+
+describe("updateSaleItem / addSaleItem — recomputeTotal race guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    txMocks.saleFindFirst.mockResolvedValue({ id: "sale-1", status: "ACCEPTED" });
+    txMocks.saleItemFindFirst.mockResolvedValue({
+      id: "item-1",
+      saleId: "sale-1",
+      variantId: "v-1",
+      quantity: new Prisma.Decimal(1),
+      unitPrice: new Prisma.Decimal(500),
+      removedAt: null,
+      variant: { product: { name: "Cola", saleType: "UNIT" } },
+    });
+    txMocks.productVariantFindUnique.mockResolvedValue({
+      id: "v-2",
+      isActive: true,
+      price: new Prisma.Decimal(700),
+      product: { name: "Fanta", isActive: true, saleType: "UNIT" },
+    });
+    outerSaleFindFirstMock.mockResolvedValue(FAKE_SALE_DETAIL);
+  });
+
+  it("updateSaleItem locks the sale row (SELECT ... FOR UPDATE) before reading anything else — this is what closes the lost-update race proven in prisma/reportsAudit.ts (scenario E)", async () => {
+    await updateSaleItem("loc-1", "sale-1", "item-1", "owner-1", { quantity: 3 });
+
+    expect(txMocks.queryRaw).toHaveBeenCalledTimes(1);
+    const lockOrder = txMocks.queryRaw.mock.invocationCallOrder[0];
+    const findFirstOrder = txMocks.saleFindFirst.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(findFirstOrder);
+    expect(txMocks.saleItemFindMany).toHaveBeenCalled(); // recomputeTotal still runs
+  });
+
+  it("addSaleItem locks the sale row (SELECT ... FOR UPDATE) before reading anything else", async () => {
+    await addSaleItem("loc-1", "sale-1", "owner-1", { variantId: "v-2", quantity: 1 });
+
+    expect(txMocks.queryRaw).toHaveBeenCalledTimes(1);
+    const lockOrder = txMocks.queryRaw.mock.invocationCallOrder[0];
+    const findFirstOrder = txMocks.saleFindFirst.mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(findFirstOrder);
+    expect(txMocks.saleItemFindMany).toHaveBeenCalled();
   });
 });
