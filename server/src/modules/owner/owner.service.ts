@@ -162,12 +162,20 @@ export async function removeSaleItem(
     if (!item) throw new AppError(404, "NOT_FOUND", "Позиция не найдена");
     if (item.removedAt) throw new AppError(409, "ITEM_ALREADY_REMOVED", "Позиция уже удалена");
 
-    await restockRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), ownerId, item.id);
-
-    await tx.saleItem.update({
-      where: { id: item.id },
+    // Atomically claims this line BEFORE restocking — same reasoning as sale.service.ts's
+    // acceptSale/rejectSale: the read above doesn't lock anything, so two concurrent removals of
+    // the SAME line could otherwise both see removedAt: null and both restock it. The `WHERE
+    // removedAt IS NULL` here is what a second, racing transaction actually contends on; a loser
+    // sees count 0 and stops before ever calling restockRecipeIngredients.
+    const claimed = await tx.saleItem.updateMany({
+      where: { id: item.id, removedAt: null },
       data: { removedAt: new Date(), removedById: ownerId, removeReason: input.reason ?? null },
     });
+    if (claimed.count === 0) {
+      throw new AppError(409, "ITEM_ALREADY_REMOVED", "Позиция уже удалена");
+    }
+
+    await restockRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), ownerId, item.id);
 
     await recomputeTotal(tx, saleId);
 
@@ -320,16 +328,24 @@ export async function cancelSale(locationId: string, saleId: string, ownerId: st
     if (!sale) throw new AppError(404, "NOT_FOUND", "Продажа не найдена");
     if (sale.status !== "ACCEPTED") throw new AppError(409, "SALE_NOT_CORRECTABLE", "Отменить можно только оформленную продажу");
 
+    // Atomically claims the cancellation BEFORE restocking anything — same reasoning as
+    // sale.service.ts's acceptSale/rejectSale and removeSaleItem above: the read above doesn't
+    // lock the row, so two concurrent cancelSale() calls for the same sale could otherwise both
+    // see ACCEPTED, both restock every line, and both write a CANCELLED status + change log.
+    // A losing transaction sees count 0 and stops before touching stock.
+    const claimed = await tx.sale.updateMany({
+      where: { id: saleId, status: "ACCEPTED" },
+      data: { status: "CANCELLED", cancelledAt: new Date(), cancelledById: ownerId, cancelReason: input.reason ?? null },
+    });
+    if (claimed.count === 0) {
+      throw new AppError(409, "SALE_NOT_CORRECTABLE", "Отменить можно только оформленную продажу");
+    }
+
     // Put back everything still deducted — items already individually removed were already
     // restocked at removal time, so only the still-active lines need reversing here.
     for (const item of sale.items) {
       await restockRecipeIngredients(tx, item.variantId, locationId, Number(item.quantity), ownerId, item.id);
     }
-
-    await tx.sale.update({
-      where: { id: saleId },
-      data: { status: "CANCELLED", cancelledAt: new Date(), cancelledById: ownerId, cancelReason: input.reason ?? null },
-    });
 
     await tx.saleChangeLog.create({
       data: {
