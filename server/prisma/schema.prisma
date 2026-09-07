@@ -128,7 +128,12 @@ model User {
   removedSaleItems SaleItem[]    @relation("SaleItemRemovedBy")
   saleChangeLogs SaleChangeLog[] @relation("SaleChangePerformedBy")
 
-  @@index([login])
+  // No @@index([login]) here — `login String @unique` above already creates a btree index on
+  // this exact column; a second plain index on the same single column is pure duplication
+  // (confirmed via pg_indexes: both users_login_key (unique) and the old users_login_idx existed
+  // side by side). Removed — see migration 20260907210732_drop_redundant_login_index — it never
+  // added a query plan Postgres could pick over the unique index, only extra storage and one
+  // more index to maintain on every insert/update.
   @@map("users")
 }
 

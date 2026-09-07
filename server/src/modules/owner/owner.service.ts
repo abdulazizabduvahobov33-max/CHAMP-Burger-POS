@@ -94,7 +94,6 @@ export async function listOwnerSales(locationId: string, query: ListOwnerSalesQu
         status: true,
         seller: { select: { name: true } },
         table: { select: { number: true } },
-        _count: { select: { items: { where: { removedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.pageSize,
@@ -102,6 +101,21 @@ export async function listOwnerSales(locationId: string, query: ListOwnerSalesQu
     }),
     prisma.sale.count({ where }),
   ]);
+
+  // Item counts scoped to just this page's sale ids, not via `_count: { select: { items } } }` —
+  // same fix and same reason as report.service.ts's listSales (see its comment): that relation-
+  // count form makes Postgres GROUP BY the entire sale_items table before joining it onto the
+  // page, so its cost scales with total sale_items row count instead of pageSize (confirmed via
+  // EXPLAIN ANALYZE, prisma/explainAudit.ts).
+  const itemCounts =
+    sales.length > 0
+      ? await prisma.saleItem.groupBy({
+          by: ["saleId"],
+          where: { saleId: { in: sales.map((s) => s.id) }, removedAt: null },
+          _count: { _all: true },
+        })
+      : [];
+  const itemCountBySaleId = new Map(itemCounts.map((c) => [c.saleId, c._count._all]));
 
   return {
     items: sales.map((s) => ({
@@ -112,7 +126,7 @@ export async function listOwnerSales(locationId: string, query: ListOwnerSalesQu
       createdAt: s.createdAt,
       totalAmount: s.totalAmount.toString(),
       status: s.status,
-      itemCount: s._count.items,
+      itemCount: itemCountBySaleId.get(s.id) ?? 0,
     })),
     page: query.page,
     pageSize: query.pageSize,

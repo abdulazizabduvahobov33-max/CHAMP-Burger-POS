@@ -55,8 +55,17 @@ export async function getDashboardSummary(locationId: string) {
 /**
  * Paginated sales list for the given date range, plus an aggregate summary (revenue/count/
  * average) over that SAME filtered where-clause — one extra `aggregate` call instead of a
- * second round-trip from the client. `_count: { items: true }` gets the line-item count
- * without ever fetching the SaleItem rows themselves.
+ * second round-trip from the client.
+ *
+ * Item counts are fetched as a SEPARATE query scoped to just this page's sale ids, not via
+ * Prisma's `_count: { select: { items: ... } } }` relation aggregation — proven (EXPLAIN
+ * ANALYZE, prisma/explainAudit.ts) to make Postgres GROUP BY the ENTIRE sale_items table by
+ * saleId first and only afterward join that onto the ≤pageSize sales actually being shown, so
+ * its cost scales with TOTAL sale_items row count, not with pageSize. At ~100k sales / ~350k
+ * items this measured 344-500ms for a 20-row page — and keeps growing with unrelated,
+ * never-shown history. The two-query version below costs the same as before at small scale and
+ * stays flat as the table grows, because the second query is scoped by saleId (existing index),
+ * never wider than this page.
  */
 export async function listSales(locationId: string, query: SalesListQuery) {
   const range = resolveDateRange(query.preset, query.from, query.to);
@@ -80,9 +89,6 @@ export async function listSales(locationId: string, query: SalesListQuery) {
         totalAmount: true,
         seller: { select: { name: true } },
         table: { select: { number: true } },
-        // removedAt: null — an owner-panel-removed line item shouldn't inflate the count shown
-        // here; Sale.totalAmount is already recomputed to match (see owner.service.ts).
-        _count: { select: { items: { where: { removedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.pageSize,
@@ -91,6 +97,20 @@ export async function listSales(locationId: string, query: SalesListQuery) {
     prisma.sale.count({ where }),
     prisma.sale.aggregate({ where, _sum: { totalAmount: true }, _count: { _all: true } }),
   ]);
+
+  // removedAt: null — an owner-panel-removed line item shouldn't inflate the count shown here;
+  // Sale.totalAmount is already recomputed to match (see owner.service.ts). A sale with zero
+  // active items simply has no group below — the `?? 0` default covers it, same as the
+  // COALESCE(...,0) the old single-query version relied on.
+  const itemCounts =
+    sales.length > 0
+      ? await prisma.saleItem.groupBy({
+          by: ["saleId"],
+          where: { saleId: { in: sales.map((s) => s.id) }, removedAt: null },
+          _count: { _all: true },
+        })
+      : [];
+  const itemCountBySaleId = new Map(itemCounts.map((c) => [c.saleId, c._count._all]));
 
   const summaryRevenue = summary._sum.totalAmount ?? ZERO;
 
@@ -101,7 +121,7 @@ export async function listSales(locationId: string, query: SalesListQuery) {
       tableNumber: s.table?.number ?? null,
       createdAt: s.createdAt,
       sellerName: s.seller.name,
-      itemCount: s._count.items,
+      itemCount: itemCountBySaleId.get(s.id) ?? 0,
       totalAmount: s.totalAmount.toString(),
     })),
     total,

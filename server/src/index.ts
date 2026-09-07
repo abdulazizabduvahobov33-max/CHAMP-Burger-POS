@@ -36,7 +36,14 @@ async function bootstrap() {
   const shutdown = async (signal: string) => {
     // eslint-disable-next-line no-console
     console.log(`\n${signal} received, shutting down...`);
-    server.close();
+    // `server.close()` alone stops accepting NEW connections but returns immediately — it does
+    // NOT wait for in-flight requests to finish. Without awaiting its callback, prisma.$disconnect()
+    // could tear down the connection pool while a request (e.g. createSale's transaction) is
+    // still mid-flight on Render's SIGTERM-on-deploy, turning a routine redeploy into a
+    // half-committed write. Awaiting it here lets Node's own default (existing connections get
+    // up to ~2 minutes to finish; Render's SIGTERM grace period is what actually bounds this in
+    // practice) drain safely before the DB connection goes away.
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     await prisma.$disconnect();
     process.exit(0);
   };
