@@ -45,6 +45,7 @@ vi.mock("../recipes/recipe.service.js", () => ({
   deductRecipeIngredients: deductRecipeIngredientsMock,
 }));
 
+import { notificationBus } from "../../shared/notifications/notificationBus.js";
 import { acceptSale, createSale, rejectSale } from "./sale.service.js";
 
 const FAKE_SALE_ROW = {
@@ -160,6 +161,18 @@ describe("createSale — idempotency (clientRequestId)", () => {
 
     expect(saleFindUniqueMock).not.toHaveBeenCalled();
     expect(txMocks.saleCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ clientRequestId: null }) }));
+  });
+
+  it("retrying with the same clientRequestId (pre-check fast path) never publishes a second order.new notification", async () => {
+    // The fast path (existing sale found before opening a transaction) returns via getSale()
+    // alone and never reaches the notification block at all — this locks that in.
+    const publishSpy = vi.spyOn(notificationBus, "publish").mockImplementation(() => {});
+    saleFindUniqueMock.mockResolvedValue({ id: "sale-1" });
+
+    await createSale("loc-1", "seller-1", [{ variantId: "variant-1", quantity: 1 }], undefined, false, "table-1", "key-retry");
+
+    expect(publishSpy).not.toHaveBeenCalled();
+    publishSpy.mockRestore();
   });
 });
 
